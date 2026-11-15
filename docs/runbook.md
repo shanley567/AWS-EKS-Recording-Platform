@@ -114,14 +114,14 @@ cd app
 Build latest version:
 
 ```powershell
-docker build -t synthetic-generator:v0.5.0 .
+docker build -t synthetic-generator:<image_version_vX.X.X> .
 ```
 
 Tag:
 
 ```powershell
 docker tag synthetic-generator:v0.5.0 `
-548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:v0.5.0
+548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:<image_version_vX.X.X>
 ```
 
 ---
@@ -151,7 +151,7 @@ Login Succeeded
 
 ```powershell
 docker push `
-548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:v0.5.0
+548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:<image_version_vX.X.X>
 ```
 
 Expected:
@@ -210,7 +210,7 @@ synthetic-generator
 Verify deployment image:
 
 ```yaml
-image: 548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:v0.5.0
+image: 548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:<image_version_vX.X.X>
 ```
 
 Deploy:
