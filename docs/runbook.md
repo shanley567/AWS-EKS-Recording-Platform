@@ -160,8 +160,24 @@ Expected:
 digest: sha256:...
 ```
 
----
 
+Verify Push:
+```powershell
+aws ecr list-images `
+--repository-name synthetic-generator `
+--region eu-west-2
+```
+
+If image does not show, verification steps:
+
+1. List docker images
+2. Re-build
+3. Tag Image
+4. ECR Auth
+5. ECR push
+
+
+---
 # 8. Recreate Application Namespace
 
 ```powershell
