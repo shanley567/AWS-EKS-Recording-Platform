@@ -58,13 +58,19 @@ spec:
 
         # Prevents the container running as root.
         runAsNonRoot: true
+        
+          # Explicit UID of the application user.
+        runAsUser: 1000
+
+        # Explicit GID of the application user.
+        runAsGroup: 1000
 
       containers:
 
         - name: synthetic-generator
 
           # Image stored in Amazon ECR.
-          image: 548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:v0.5.0
+          image: 548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:v0.5.4
 
           # Always pull the latest image for this tag.
           imagePullPolicy: Always

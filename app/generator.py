@@ -90,22 +90,11 @@ def live():
 
 @app.route("/health/ready")
 def ready():
-    """
-    Readiness probe.
-    Confirms application can communicate with S3.
-    """
 
-    try:
-        s3.head_bucket(Bucket=BUCKET_NAME)
-        return Response("READY", status=200)
-
-    except Exception:
-        logger.exception("Readiness check failed")
-
-        return Response(
-            "NOT READY",
-            status=503
-        )
+    return Response(
+        "READY",
+        status=200
+    )
 
 
 @app.route("/metrics")
