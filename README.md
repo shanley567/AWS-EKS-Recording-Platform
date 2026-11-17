@@ -41,26 +41,26 @@ The current application generates **synthetic recording metadata** and uploads i
 
 # Project status
 
-| Area | Status |
-|--------|--------|
-| AWS infrastructure provisioned with Terraform | ✅ Implemented |
-| Amazon EKS cluster and managed node group | ✅ Implemented |
-| Containerized Python synthetic generator | ✅ Implemented |
-| Kubernetes deployment and IRSA workload identity | ✅ Implemented |
-| Synthetic data uploaded to Amazon S3 | ✅ Implemented |
-| Terraform validation in GitHub Actions | ✅ Implemented |
-| Docker build validation in GitHub Actions | ✅ Implemented |
-| Prometheus application metrics | ✅ Implemented |
-| Grafana operational dashboards | ✅ Implemented |
-| Kubernetes liveness, readiness, and startup probes | ✅ Implemented |
-| Non-root container execution | ✅ Implemented |
-| Platform rebuild runbook | ✅ Implemented |
-| Disaster recovery validation | ✅ Implemented |
-| AlertManager integration | 🚧 In Progress |
-| Prometheus alerting rules | 🚧 In Progress |
-| Recording-gap detection service | Planned |
-| Real radio stream recording | Planned |
-| Deployment automation and multi-environment support | Planned |
+| Area                                                | Status         |
+| --------------------------------------------------- | -------------- |
+| AWS infrastructure provisioned with Terraform       | ✅ Implemented |
+| Amazon EKS cluster and managed node group           | ✅ Implemented |
+| Containerized Python synthetic generator            | ✅ Implemented |
+| Kubernetes deployment and IRSA workload identity    | ✅ Implemented |
+| Synthetic data uploaded to Amazon S3                | ✅ Implemented |
+| Terraform validation in GitHub Actions              | ✅ Implemented |
+| Docker build validation in GitHub Actions           | ✅ Implemented |
+| Prometheus application metrics                      | ✅ Implemented |
+| Grafana operational dashboards                      | ✅ Implemented |
+| Kubernetes liveness, readiness, and startup probes  | ✅ Implemented |
+| Non-root container execution                        | ✅ Implemented |
+| Platform rebuild runbook                            | ✅ Implemented |
+| Disaster recovery validation                        | ✅ Implemented |
+| AlertManager integration                            | 🚧 In Progress |
+| Prometheus alerting rules                           | 🚧 In Progress |
+| Recording-gap detection service                     | Planned        |
+| Real radio stream recording                         | Planned        |
+| Deployment automation and multi-environment support | Planned        |
 
 The platform has been successfully destroyed and recreated using Terraform and operational runbooks, validating that the infrastructure and deployment process are reproducible and recoverable.
 
@@ -194,12 +194,12 @@ The platform exposes operational metrics and health endpoints that enable monito
 
 The following custom Prometheus metrics are exported:
 
-| Metric | Description |
-|----------|----------|
-| recordings_generated_total | Total recordings generated |
-| s3_upload_success_total | Successful S3 uploads |
-| s3_upload_failure_total | Failed S3 uploads |
-| upload_duration_seconds | Upload latency histogram |
+| Metric                            | Description                        |
+| --------------------------------- | ---------------------------------- |
+| recordings_generated_total        | Total recordings generated         |
+| s3_upload_success_total           | Successful S3 uploads              |
+| s3_upload_failure_total           | Failed S3 uploads                  |
+| upload_duration_seconds           | Upload latency histogram           |
 | generation_cycle_duration_seconds | Generation cycle latency histogram |
 
 Metrics are exposed through:
@@ -257,21 +257,14 @@ The platform includes a custom operational dashboard built on Grafana.
 - Resource utilization monitoring
 - Pod health indicators
 
-### TODO - ADD SCREENSHOT
+![KPIs](docs/Grafana%20Dashboard%20Snapshots/KPIs.png)
 
-Insert dashboard screenshot here.
+![Business Metrics](docs/Grafana%20Dashboard%20Snapshots/Buisness%20Metrics.png)
 
-Example:
+![Platform Health](docs/Grafana%20Dashboard%20Snapshots/Platform%20Health.png)
 
-```text
-docs/images/operations-dashboard.png
-```
+![Platform Performance](docs/Grafana%20Dashboard%20Snapshots/Platform%20Performance.png)
 
-Markdown:
-
-```md
-![Operations Dashboard](docs/images/operations-dashboard.png)
-```
 
 ---
 
@@ -480,9 +473,9 @@ Future production enhancements:
 
 # Release milestones
 
-| Release | Capability |
-|----------|----------|
-| v0.5.4 | Health checks, probes, non-root containers, operational dashboard |
+| Release | Capability                                                        |
+| ------- | ----------------------------------------------------------------- |
+| v0.5.4  | Health checks, probes, non-root containers, operational dashboard |
 
 ---
 
@@ -540,21 +533,21 @@ Future production enhancements:
 
 # Technology stack
 
-| Area | Technology |
-|--------|--------|
-| Cloud | AWS |
-| Infrastructure as Code | Terraform |
-| Container Orchestration | Kubernetes |
-| Managed Kubernetes | Amazon EKS |
-| Container Registry | Amazon ECR |
-| Object Storage | Amazon S3 |
-| Workload Identity | IRSA |
-| Application Runtime | Python |
-| Containerization | Docker |
-| Monitoring | Prometheus |
-| Visualization | Grafana |
-| Alerting | AlertManager |
-| CI/CD | GitHub Actions |
+| Area                    | Technology     |
+| ----------------------- | -------------- |
+| Cloud                   | AWS            |
+| Infrastructure as Code  | Terraform      |
+| Container Orchestration | Kubernetes     |
+| Managed Kubernetes      | Amazon EKS     |
+| Container Registry      | Amazon ECR     |
+| Object Storage          | Amazon S3      |
+| Workload Identity       | IRSA           |
+| Application Runtime     | Python         |
+| Containerization        | Docker         |
+| Monitoring              | Prometheus     |
+| Visualization           | Grafana        |
+| Alerting                | AlertManager   |
+| CI/CD                   | GitHub Actions |
 
 ---
 
@@ -573,3 +566,4 @@ Recommended images:
 ```text
 docs/images/
 ├── architecture
+```
