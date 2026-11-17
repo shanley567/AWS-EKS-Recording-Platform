@@ -114,14 +114,14 @@ cd app
 Build latest version:
 
 ```powershell
-docker build -t synthetic-generator:<image_version_vX.X.X> .
+docker build -t <docker_image_version> .
 ```
 
 Tag:
 
 ```powershell
-docker tag synthetic-generator:v0.5.0 `
-548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:<image_version_vX.X.X>
+docker tag <docker_image_version> `
+548722508417.dkr.ecr.eu-west-2.amazonaws.com/<docker_image_version>
 ```
 
 ---
@@ -151,7 +151,7 @@ Login Succeeded
 
 ```powershell
 docker push `
-548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:<image_version_vX.X.X>
+<tagged_docker_image_version>
 ```
 
 Expected:
@@ -160,8 +160,8 @@ Expected:
 digest: sha256:...
 ```
 
-
 Verify Push:
+
 ```powershell
 aws ecr list-images `
 --repository-name synthetic-generator `
@@ -176,8 +176,8 @@ If image does not show, verification steps:
 4. ECR Auth
 5. ECR push
 
-
 ---
+
 # 8. Recreate Application Namespace
 
 ```powershell
@@ -301,6 +301,11 @@ Upload successful
 ---
 
 # 13. Verify S3 Uploads
+
+Verify s3 bucket exists:
+```powershell
+aws s3 ls
+```
 
 Check logs for:
 
@@ -632,7 +637,7 @@ Observability:
 # Current Version
 
 ```text
-v0.5.0
+v0.5.4
 
 Features:
 - Prometheus Metrics
