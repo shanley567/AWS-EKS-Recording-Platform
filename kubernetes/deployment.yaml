@@ -70,7 +70,7 @@ spec:
         - name: synthetic-generator
 
           # Image stored in Amazon ECR.
-          image: 548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:v0.5.5
+          image: 548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:v0.5.7
 
           # Always pull the latest image for this tag.
           imagePullPolicy: Always

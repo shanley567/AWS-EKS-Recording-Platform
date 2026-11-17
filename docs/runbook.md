@@ -248,6 +248,14 @@ Expected:
 1/1 Running
 ```
 
+
+If needing to scale a deployment to make room:
+```powershell
+kubectl scale deployment synthetic-generator `
+--replicas=<> `
+-n radio-platform
+```
+
 ---
 
 # 11. Deploy Service
@@ -303,6 +311,7 @@ Upload successful
 # 13. Verify S3 Uploads
 
 Verify s3 bucket exists:
+
 ```powershell
 aws s3 ls
 ```

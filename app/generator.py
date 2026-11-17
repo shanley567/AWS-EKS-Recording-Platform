@@ -22,7 +22,7 @@ from prometheus_client import (
 
 BUCKET_NAME = "jsp-radio-recordings-bucket-2026-demo"
 
-STATIONS_FILE = Path("stations.yaml")
+STATIONS_FILE = Path("/app/stations.yaml")
 
 OUTPUT_DIR = Path("output")
 OUTPUT_DIR.mkdir(exist_ok=True)
@@ -69,14 +69,14 @@ def load_stations() -> list[str]:
             "stations.yaml is empty"
         )
 
-    stations = config.get("stations")
+    stations = config.get("stations", [])
 
-    if not stations:
+    if len(stations) == 0:
         raise ValueError(
             "No stations configured in stations.yaml"
         )
 
-    return stations
+    return sorted(stations)
 
 
 STATIONS = load_stations()
@@ -176,6 +176,7 @@ def start_web_server():
         use_reloader=False
     )
 
+
 # ------------------------------------------------------------------
 # HELPER FUNCTIONS
 # ------------------------------------------------------------------
@@ -226,6 +227,7 @@ def upload_file(
         upload_duration
     )
 
+
 # ------------------------------------------------------------------
 # STARTUP
 # ------------------------------------------------------------------
@@ -239,7 +241,7 @@ logger.info("===================================================")
 logger.info("Synthetic Generator Starting")
 logger.info("Bucket: %s", BUCKET_NAME)
 logger.info("Stations Configured: %s", len(STATIONS))
-logger.info("Station List: %s", ", ".join(sorted(STATIONS)))
+logger.info("Station List: %s", ", ".join(STATIONS))
 logger.info("Output Directory: %s", OUTPUT_DIR.absolute())
 logger.info("Metrics Endpoint: http://0.0.0.0:8000/metrics")
 logger.info("Liveness Endpoint: http://0.0.0.0:8000/health/live")
