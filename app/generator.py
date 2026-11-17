@@ -7,6 +7,7 @@ from pathlib import Path
 from threading import Thread
 
 import boto3
+import yaml
 from flask import Flask, Response
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
@@ -15,13 +16,13 @@ from prometheus_client import (
     generate_latest
 )
 
+# ------------------------------------------------------------------
+# CONFIGURATION
+# ------------------------------------------------------------------
+
 BUCKET_NAME = "jsp-radio-recordings-bucket-2026-demo"
 
-STATIONS = [
-    "station-001",
-    "station-002",
-    "station-003"
-]
+STATIONS_FILE = Path("stations.yaml")
 
 OUTPUT_DIR = Path("output")
 OUTPUT_DIR.mkdir(exist_ok=True)
@@ -32,6 +33,53 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# ------------------------------------------------------------------
+# STATION CONFIG LOADING
+# ------------------------------------------------------------------
+
+
+def load_stations() -> list[str]:
+    """
+    Load stations from YAML configuration.
+
+    Expected format:
+
+    stations:
+      - station-001
+      - station-002
+      - station-003
+    """
+
+    if not STATIONS_FILE.exists():
+        raise FileNotFoundError(
+            f"Station configuration file not found: {STATIONS_FILE}"
+        )
+
+    with open(
+        STATIONS_FILE,
+        "r",
+        encoding="utf-8"
+    ) as file:
+
+        config = yaml.safe_load(file)
+
+    if not config:
+        raise ValueError(
+            "stations.yaml is empty"
+        )
+
+    stations = config.get("stations")
+
+    if not stations:
+        raise ValueError(
+            "No stations configured in stations.yaml"
+        )
+
+    return stations
+
+
+STATIONS = load_stations()
 
 # ------------------------------------------------------------------
 # AWS CLIENTS
@@ -83,13 +131,20 @@ app = Flask(__name__)
 def live():
     """
     Liveness probe.
-    Confirms the application process is alive.
+    Confirms process is running.
     """
-    return Response("OK", status=200)
+
+    return Response(
+        "OK",
+        status=200
+    )
 
 
 @app.route("/health/ready")
 def ready():
+    """
+    Readiness probe.
+    """
 
     return Response(
         "READY",
@@ -111,7 +166,7 @@ def metrics():
 
 def start_web_server():
     """
-    Starts Flask web server.
+    Start Flask endpoints.
     """
 
     app.run(
@@ -121,15 +176,18 @@ def start_web_server():
         use_reloader=False
     )
 
-
 # ------------------------------------------------------------------
 # HELPER FUNCTIONS
 # ------------------------------------------------------------------
 
-def upload_file(filepath: Path, station: str) -> None:
+
+def upload_file(
+    filepath: Path,
+    station: str
+) -> None:
     """
-    Upload a generated recording file to S3 using a
-    partitioned folder structure.
+    Upload a generated file to S3 using
+    a date-partitioned structure.
     """
 
     current_time = datetime.now(UTC)
@@ -168,7 +226,6 @@ def upload_file(filepath: Path, station: str) -> None:
         upload_duration
     )
 
-
 # ------------------------------------------------------------------
 # STARTUP
 # ------------------------------------------------------------------
@@ -182,7 +239,7 @@ logger.info("===================================================")
 logger.info("Synthetic Generator Starting")
 logger.info("Bucket: %s", BUCKET_NAME)
 logger.info("Stations Configured: %s", len(STATIONS))
-logger.info("Station List: %s", ", ".join(STATIONS))
+logger.info("Station List: %s", ", ".join(sorted(STATIONS)))
 logger.info("Output Directory: %s", OUTPUT_DIR.absolute())
 logger.info("Metrics Endpoint: http://0.0.0.0:8000/metrics")
 logger.info("Liveness Endpoint: http://0.0.0.0:8000/health/live")
@@ -213,6 +270,7 @@ while True:
         }
 
         station_dir = OUTPUT_DIR / station
+
         station_dir.mkdir(
             parents=True,
             exist_ok=True
@@ -220,7 +278,11 @@ while True:
 
         filename = station_dir / f"{int(time.time())}.json"
 
-        with open(filename, "w") as file:
+        with open(
+            filename,
+            "w",
+            encoding="utf-8"
+        ) as file:
 
             json.dump(
                 payload,
