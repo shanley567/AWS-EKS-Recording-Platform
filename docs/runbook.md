@@ -248,12 +248,15 @@ Expected:
 1/1 Running
 ```
 
-
-If needing to scale a deployment to make room:
+If needing to scale a deployment to make room, check which deployments can be scaled down:
 ```powershell
-kubectl scale deployment synthetic-generator `
+kubectl get deployments -A
+```
+Then scale down and up as needed:
+```powershell
+kubectl scale deployment <name> `
 --replicas=<> `
--n radio-platform
+-n <namespace>
 ```
 
 ---
@@ -435,16 +438,7 @@ Without this label Prometheus will not discover the ServiceMonitor.
 
 # 18. Verify Prometheus
 
-Port-forward:
-
-```powershell
-kubectl port-forward `
--n monitoring `
-svc/monitoring-kube-prometheus-prometheus `
-9090:9090
-```
-
-Open:
+Port-forward:Open:
 
 ```text
 http://localhost:9090
