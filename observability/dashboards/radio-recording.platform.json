@@ -4,18 +4,18 @@
   "metadata": {
     "name": "adt4mww",
     "namespace": "default",
-    "uid": "36bcad4e-0679-4a26-a42b-cc46b72a52a3",
-    "resourceVersion": "1794927684415997",
-    "generation": 3,
-    "creationTimestamp": "2026-11-17T13:41:35Z",
+    "uid": "6b5f7605-094d-4eeb-8957-615b47aab5d4",
+    "resourceVersion": "1795010846774013",
+    "generation": 26,
+    "creationTimestamp": "2026-11-18T13:11:56Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "1491167628005376"
+      "grafana.app/deprecatedInternalID": "1846094493917184"
     },
     "annotations": {
-      "grafana.app/createdBy": "user:eg4kt1t0ru51ce",
+      "grafana.app/createdBy": "user:fg4oba0ltybk0e",
       "grafana.app/saved-from-ui": "Grafana v13.3.1 (da3aa3ff57)",
-      "grafana.app/updatedBy": "user:eg4kt1t0ru51ce",
-      "grafana.app/updatedTimestamp": "2026-11-17T15:01:24Z"
+      "grafana.app/updatedBy": "user:fg4oba0ltybk0e",
+      "grafana.app/updatedTimestamp": "2026-11-18T14:07:26Z"
     }
   },
   "spec": {
@@ -67,6 +67,7 @@
           "id": 1,
           "title": "Total Recordings Generated",
           "description": "",
+          "subtitle": "Last 24h",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -84,7 +85,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(recordings_generated_total)",
+                        "expr": "sum(\r\n  increase(recordings_generated_total[24h])\r\n)",
                         "legendFormat": "__auto",
                         "range": true
                       }
@@ -164,7 +165,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(\r\n  kube_pod_container_status_restarts_total{\r\n    namespace=\"radio-platform\"\r\n  }\r\n)",
+                        "expr": "sum(\r\n  increase(\r\n    kube_pod_container_status_restarts_total{\r\n      namespace=\"radio-platform\"\r\n    }[24h]\r\n  )\r\n)",
                         "legendFormat": "__auto",
                         "range": true
                       }
@@ -208,6 +209,14 @@
                       {
                         "value": 0,
                         "color": "green"
+                      },
+                      {
+                        "value": 1,
+                        "color": "#EAB839"
+                      },
+                      {
+                        "value": 5,
+                        "color": "red"
                       }
                     ]
                   },
@@ -421,12 +430,13 @@
           }
         }
       },
-      "panel-2": {
+      "panel-13": {
         "kind": "Panel",
         "spec": {
-          "id": 2,
-          "title": "Successful Uploads",
+          "id": 13,
+          "title": "Upload Success Rate",
           "description": "",
+          "subtitle": "1h AVG",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -444,7 +454,108 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(s3_upload_success_total)",
+                        "expr": "100 *\r\n(\r\n  sum(increase(s3_upload_success_total[1h]))\r\n  or vector(0)\r\n)\r\n/\r\nclamp_min(\r\n  (\r\n    (sum(increase(s3_upload_success_total[1h])) or vector(0))\r\n    +\r\n    (sum(increase(s3_upload_failure_total[1h])) or vector(0))\r\n  ),\r\n  1\r\n)",
+                        "legendFormat": "__auto",
+                        "range": true
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "gauge",
+            "version": "13.3.1",
+            "spec": {
+              "options": {
+                "barShape": "flat",
+                "barWidthFactor": 0.54,
+                "effects": {
+                  "barGlow": false,
+                  "centerGlow": false,
+                  "gradient": false
+                },
+                "endpointMarker": "point",
+                "minVizHeight": 75,
+                "minVizWidth": 75,
+                "orientation": "auto",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "segmentCount": 63,
+                "segmentSpacing": 0.3,
+                "shape": "gauge",
+                "showThresholdLabels": false,
+                "showThresholdMarkers": true,
+                "sizing": "auto",
+                "sparkline": true,
+                "textMode": "auto"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "percent",
+                  "thresholds": {
+                    "mode": "percentage",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "red"
+                      },
+                      {
+                        "value": 95,
+                        "color": "#EAB839"
+                      },
+                      {
+                        "value": 99,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  }
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-2": {
+        "kind": "Panel",
+        "spec": {
+          "id": 2,
+          "title": "Successful Uploads",
+          "description": "",
+          "subtitle": "Last 24h",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(\r\n  increase(s3_upload_success_total[24h])\r\n)",
                         "legendFormat": "__auto",
                         "range": true
                       }
@@ -507,6 +618,7 @@
           "id": 3,
           "title": "Failed Uploads",
           "description": "",
+          "subtitle": "Last 1h",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -524,7 +636,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(s3_upload_failure_total)",
+                        "expr": "(sum(increase(s3_upload_failure_total[1h])) or vector(0))",
                         "legendFormat": "__auto",
                         "range": true
                       }
@@ -591,6 +703,7 @@
           "id": 4,
           "title": "Average Upload Duration",
           "description": "",
+          "subtitle": "Last 5 mins",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -608,7 +721,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "rate(upload_duration_seconds_sum[5m])\r\n/\r\nrate(upload_duration_seconds_count[5m])",
+                        "expr": "sum by (station)(\r\n  rate(upload_duration_seconds_sum[5m])\r\n)\r\n/\r\nsum by (station)(\r\n  rate(upload_duration_seconds_count[5m])\r\n)",
                         "legendFormat": "{{station}}",
                         "range": true
                       }
@@ -698,7 +811,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "recordings_generated_total",
+                        "expr": "sum by (station)(\r\n  increase(recordings_generated_total[1h])\r\n)",
                         "legendFormat": "{{station}}",
                         "range": true
                       }
@@ -759,7 +872,7 @@
                     "barAlignment": 0,
                     "barWidthFactor": 0.9,
                     "drawStyle": "line",
-                    "fillOpacity": 50,
+                    "fillOpacity": 15,
                     "gradientMode": "none",
                     "hideFrom": {
                       "legend": false,
@@ -776,12 +889,12 @@
                     "scaleDistribution": {
                       "type": "linear"
                     },
-                    "showPoints": "always",
+                    "showPoints": "auto",
                     "showValues": false,
                     "spanNulls": false,
                     "stacking": {
                       "group": "A",
-                      "mode": "normal"
+                      "mode": "none"
                     },
                     "thresholdsStyle": {
                       "mode": "off"
@@ -798,8 +911,9 @@
         "kind": "Panel",
         "spec": {
           "id": 6,
-          "title": "Recording Rate",
+          "title": "Recording Rate (Files Generated)",
           "description": "",
+          "subtitle": "5m AVG",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -817,7 +931,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(recordings_generated_total[5m]))",
+                        "expr": "sum(\r\n  increase(recordings_generated_total[5m])\r\n)",
                         "legendFormat": "__auto",
                         "range": true
                       }
@@ -851,7 +965,7 @@
               },
               "fieldConfig": {
                 "defaults": {
-                  "unit": "opm",
+                  "unit": "none",
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -932,7 +1046,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "rate(upload_duration_seconds_sum[5m])\r\n/\r\nrate(upload_duration_seconds_count[5m])",
+                        "expr": "sum by (station)(\r\n  rate(upload_duration_seconds_sum[5m])\r\n)\r\n/\r\nsum by (station)(\r\n  rate(upload_duration_seconds_count[5m])\r\n)",
                         "legendFormat": "{{station}}",
                         "range": true
                       }
@@ -1162,7 +1276,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(\r\n  kube_pod_status_ready{\r\n    namespace=\"radio-platform\",\r\n    condition=\"true\"\r\n  }\r\n)",
+                        "expr": "sum(\r\n  kube_pod_status_ready{\r\n    namespace=\"radio-platform\",\r\n    condition=\"true\",\r\n    pod=~\"synthetic-generator.*\"\r\n  }\r\n)",
                         "legendFormat": "__auto",
                         "range": true
                       }
@@ -1203,10 +1317,6 @@
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
                       {
                         "value": 0,
                         "color": "red"
@@ -1250,6 +1360,15 @@
                         "element": {
                           "kind": "ElementReference",
                           "name": "panel-1"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-13"
                         }
                       }
                     },
