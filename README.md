@@ -60,13 +60,17 @@ The current application generates **synthetic recording metadata**, uploads it t
 | Operational runbooks | ✅ Implemented |
 | Disaster recovery validation | ✅ Implemented |
 | Rolling deployment validation | ✅ Implemented |
+| Prometheus alerting rules | ✅ Implemented |
+| Prometheus alert validation | ✅ Completed |
+| IRSA failure validation | ✅ Completed |
 | AlertManager integration | 🚧 In Progress |
-| Prometheus alerting rules | 🚧 In Progress |
 | Recording-gap detection service | Planned |
 | Real radio stream recording | Planned |
 | Multi-environment deployment support | Planned |
 
 The platform has been successfully destroyed and recreated using Terraform and operational runbooks, validating that infrastructure and deployment processes are reproducible and recoverable.
+
+Custom Prometheus alerting has been successfully deployed and validated through controlled fault injection and operational testing.
 
 ---
 
@@ -106,8 +110,9 @@ GitHub Actions
        Observability Stack
        ├── Prometheus
        ├── ServiceMonitor
+       ├── PrometheusRule Alerts
        ├── Grafana
-       └── AlertManager
+       └── AlertManager (Planned Integration)
 ```
 
 The application uses IAM Roles for Service Accounts (IRSA) to access AWS services without embedding credentials inside pods.
@@ -206,8 +211,6 @@ stations:
   - station-002
   - station-003
   - station-004
-  - station-005
-  - station-006
 ```
 
 New stations can be onboarded by updating the station configuration and deploying a new container image.
@@ -229,8 +232,41 @@ The platform has been validated against the following operational scenarios:
 - Dynamic station onboarding
 - Configuration-driven application deployment
 - Disaster recovery runbook execution
+- PrometheusRule alert validation
+- Generator outage alert validation
+- IRSA failure validation
+- Upload failure alert validation
+- Upload failure-rate alert validation
+- CPU utilisation alert validation
 
-This validation demonstrates that the platform can be recreated, monitored, and operated using documented procedures.
+This validation demonstrates that the platform can be recreated, monitored, operated, and fault-tested using documented procedures.
+
+Alert validation was performed using controlled fault injection techniques including:
+
+- Generator workload shutdown
+- IAM Role for Service Account (IRSA) misconfiguration
+- Synthetic CPU saturation
+- Upload-failure simulation through credential failure
+
+These tests verified the full operational workflow:
+
+```text
+Application Failure
+        │
+        ▼
+Metric Generation
+        │
+        ▼
+Prometheus Collection
+        │
+        ▼
+Alert Evaluation
+        │
+        ▼
+Alert State Transition
+```
+
+This approach validates not only the monitoring stack but also the business and operational behaviours of the platform.
 
 ---
 
@@ -351,6 +387,107 @@ This approach reflects operational reality and production-style observability pr
 
 ---
 
+# Alerting
+
+The platform includes custom PrometheusRule definitions designed to monitor both platform health and business-level outcomes.
+
+## Implemented Alerts
+
+| Alert | Purpose |
+|----------|----------|
+| GeneratorPodDown | Detect unavailable generator workloads |
+| UploadFailuresDetected | Detect failed S3 uploads |
+| UploadFailureRateHigh | Detect elevated upload failure rates |
+| HighCpuUsage | Detect excessive CPU utilisation |
+| HighMemoryUsage | Detect excessive memory utilisation |
+
+## Alert Validation
+
+Alert validation was completed using controlled fault injection techniques.
+
+### GeneratorPodDown
+
+Validation:
+
+```text
+Scale deployment to zero replicas
+```
+
+Result:
+
+```text
+Alert fired successfully
+```
+
+---
+
+### UploadFailuresDetected
+
+Validation:
+
+```text
+Break IAM Role for Service Account (IRSA)
+```
+
+Result:
+
+```text
+AssumeRoleWithWebIdentity failed
+Upload failure metrics increased
+Alert fired successfully
+```
+
+---
+
+### UploadFailureRateHigh
+
+Validation:
+
+```text
+Generate repeated upload failures
+```
+
+Result:
+
+```text
+Upload failure rate exceeded threshold
+Alert fired successfully
+```
+
+---
+
+### HighCpuUsage
+
+Validation:
+
+```text
+Generate sustained CPU load within the container
+```
+
+Result:
+
+```text
+Alert threshold exceeded
+Alert entered pending state
+Prometheus rule evaluation confirmed
+```
+
+Operational testing additionally validated:
+
+- IRSA credential injection
+- Prometheus rule evaluation
+- Custom metric collection
+- Business-level failure detection
+- Alert state transitions
+
+Future validation will include:
+
+- HighMemoryUsage alert
+- AlertManager notification routing
+- Incident response workflows
+
+---
+
 # Operational Resilience
 
 The platform has been validated through complete infrastructure rebuild testing.
@@ -386,6 +523,97 @@ docs/runbooks/platform-startup-runbook.md
 ```
 
 The successful rebuild demonstrates the platform can be recreated without manual AWS configuration.
+
+---
+
+# Operational Findings
+
+Operational testing identified several future enhancement opportunities.
+
+## Upload Recovery and Persistence
+
+Testing demonstrated that failed uploads remain within pod-local storage but are not durable across pod replacement.
+
+Current behaviour:
+
+```text
+Generate File
+↓
+Upload Failure
+↓
+Retain File In Pod Filesystem
+↓
+Pod Replacement
+↓
+File Lost
+```
+
+Future requirements:
+
+- Persistent temporary file storage
+- Automatic upload retries
+- Retry metrics
+- Recovery backlog monitoring
+- Recovery backlog alerting
+- Recovery after pod restart
+- Recovery after node replacement
+
+---
+
+## Cluster Capacity
+
+Alert testing exposed limitations within the single-node development cluster.
+
+Observed scenario:
+
+```text
+Rolling Deployment
+↓
+New Pod Created
+↓
+Node Pod Capacity Reached
+↓
+Deployment Stalled
+```
+
+Observed alert:
+
+```text
+KubeletTooManyPods
+```
+
+Future improvements:
+
+- Additional worker nodes
+- Cluster Autoscaler
+- Capacity monitoring dashboards
+- Deployment strategy review
+
+---
+
+## Kubernetes Metrics API
+
+Testing demonstrated that Prometheus monitoring remained functional while the Kubernetes Metrics API was unavailable.
+
+Observed:
+
+```text
+kubectl top pod
+```
+
+returned:
+
+```text
+Metrics API not available
+```
+
+Future improvements:
+
+- Metrics Server deployment
+- kubectl top support
+- Additional operational runbooks
+
+These findings were discovered through operational testing and fault injection rather than design assumptions.
 
 ---
 
@@ -511,6 +739,9 @@ Always verify:
 - Private S3 storage
 - Disaster recovery runbooks
 - Dynamic configuration management
+- PrometheusRule alerting
+- Fault-injection validation
+- IRSA validation testing
 
 ## Planned Controls
 
@@ -519,6 +750,9 @@ Always verify:
 - SLO monitoring
 - Multi-environment promotion
 - Automated recovery workflows
+- Durable upload recovery
+- Upload retry workflows
+- Persistent temporary recording storage
 
 ---
 
@@ -529,6 +763,8 @@ Always verify:
 | v0.5.4 | Health probes, non-root containers, Grafana dashboard |
 | v0.5.5 | Dynamic station onboarding using stations.yaml |
 | v0.5.6 | Deployment-safe observability and operational KPIs |
+| v0.5.7 | Prometheus alerting, fault-injection testing, alert validation |
+
 
 ---
 
@@ -556,10 +792,10 @@ Always verify:
 
 ## Phase 3 - Alerting 🚧
 
-- PrometheusRule definitions
-- AlertManager integration
-- Alert validation
-- Incident response workflows
+✅ PrometheusRule definitions
+✅ Alert validation
+⬜ AlertManager integration
+⬜ Incident response workflows
 
 ## Phase 4 - Recording Gap Detection
 

@@ -1,0 +1,145 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+
+metadata:
+  name: radio-platform-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+
+spec:
+  groups:
+    - name: radio-platform.rules
+
+      rules:
+
+        #####################################
+        # Generator Pod Down
+        #####################################
+        - alert: GeneratorPodDown
+          expr: |
+            (
+              sum(
+                kube_pod_status_ready{
+                  namespace="radio-platform",
+                  condition="true",
+                  pod=~"synthetic-generator.*"
+                }
+              )
+              or vector(0)
+            ) < 1
+          for: 30s
+          labels:
+            severity: critical
+          annotations:
+            summary: Generator pod unavailable
+            description: No synthetic generator pod is ready.
+
+        #####################################
+        # Upload Failures Detected
+        #####################################
+        - alert: UploadFailuresDetected
+          expr: |
+            (
+              increase(
+                s3_upload_failure_total[5m]
+              )
+              or vector(0)
+            ) > 0
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: Upload failures detected
+            description: One or more uploads failed during the last 5 minutes.
+
+        #####################################
+        # High Memory Usage
+        #####################################
+        - alert: HighMemoryUsage
+          expr: |
+            (
+              (
+                sum(
+                  container_memory_working_set_bytes{
+                    namespace="radio-platform"
+                  }
+                )
+                or vector(0)
+              )
+              /
+              (512 * 1024 * 1024)
+            ) * 100 > 85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: High memory utilisation
+            description: Container memory usage exceeds 85%.
+
+        #####################################
+        # High CPU Usage
+        #####################################
+        - alert: HighCpuUsage
+          expr: |
+            (
+              (
+                sum(
+                  rate(
+                    container_cpu_usage_seconds_total{
+                      namespace="radio-platform"
+                    }[5m]
+                  )
+                )
+                or vector(0)
+              )
+              /
+              0.5
+            ) * 100 > 85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: High CPU utilisation
+            description: Container CPU usage exceeds 85%.
+
+        #####################################
+        # High Upload Failure Rate
+        #####################################
+        - alert: UploadFailureRateHigh
+          expr: |
+            (
+              (
+                (
+                  sum(
+                    increase(s3_upload_failure_total[1h])
+                  )
+                  or vector(0)
+                )
+              )
+              /
+              clamp_min(
+                (
+                  (
+                    sum(
+                      increase(s3_upload_success_total[1h])
+                    )
+                    or vector(0)
+                  )
+                  +
+                  (
+                    sum(
+                      increase(s3_upload_failure_total[1h])
+                    )
+                    or vector(0)
+                  )
+                ),
+                1
+              )
+            ) * 100 > 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Upload failure rate high
+            description: More than 1 percent of uploads are failing.

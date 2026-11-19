@@ -247,7 +247,7 @@ Expected:
 ```text
 1/1 Running
 ```
-
+### If more pods required for deployment...
 If needing to scale a deployment to make room, check which deployments can be scaled down:
 ```powershell
 kubectl get deployments -A
@@ -438,7 +438,15 @@ Without this label Prometheus will not discover the ServiceMonitor.
 
 # 18. Verify Prometheus
 
-Port-forward:Open:
+Port-forward:
+```powershell
+kubectl port-forward `
+-n monitoring `
+svc/monitoring-kube-prometheus-prometheus `
+9090:9090
+```
+
+Open:
 
 ```text
 http://localhost:9090
