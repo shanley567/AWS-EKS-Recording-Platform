@@ -184,7 +184,7 @@ Create Recording Segment
 
         ▼
 
-Store Locally
+Persist To Durable Local Storage
 
         │
 
@@ -196,24 +196,28 @@ Upload To S3
 
         ▼
 
-Verify Upload
+Upload Successful?
+       / \
+      /   \
+    Yes    No
+     │      │
+     ▼      ▼
 
-        │
-
-        ▼
-
-Delete Local Copy
-
-        │
-
-        ▼
-
-Continue Recording
+Delete     Retain Segment
+Local      For Retry
+Copy        │
+            ▼
+      Retry Workflow
+            │
+            ▼
+       Upload To S3
 ```
 
 ---
 
 # Storage Design
+
+
 
 Recordings are partitioned by station and time.
 
@@ -238,6 +242,67 @@ Benefits:
 - Lifecycle policy support
 - Improved analytics performance
 - Data lake compatibility
+
+---
+## Upload Recovery Strategy
+Operational testing identified a critical reliability requirement.
+
+Testing scenario:
+```text
+Recording Generated
+        │
+        ▼
+Upload Failed
+        │
+        ▼
+Recording Retained In Pod Filesystem
+        │
+        ▼
+Pod Replaced
+        │
+        ▼
+Recording Lost
+```
+The prototype currently retains failed uploads only within ephemeral container storage.
+
+This behaviour is acceptable for synthetic test data but would be unacceptable for production audio recording workloads.
+
+Future production requirements:
+
+Failed uploads must survive pod restarts
+Failed uploads must survive node replacement
+Failed uploads must survive deployment rollouts
+Uploads must automatically retry
+Recovery backlog must be observable
+Recovery backlog must be alertable
+
+Future implementation options:
+```text
+Amazon EFS
+or 
+PersistentVolume
+```
+for backend storage.
+
+Target workflow:
+```text
+Recording Created
+        │
+        ▼
+Persist To Durable Storage
+        │
+        ▼
+Upload Attempt
+        │
+        ▼
+Failure
+        │
+        ▼
+Retry Until Successful
+        │
+        ▼
+Remove Local Copy
+```
 
 ---
 
@@ -306,6 +371,42 @@ Horizontal Pod Autoscaler
 Cluster Autoscaler
 ```
 
+## Capacity-Aware Deployments
+Operational testing revealed a deployment failure scenario caused by pod-capacity exhaustion.
+
+Observed scenario:
+```text
+Rolling Deployment
+        │
+        ▼
+New Pod Created
+        │
+        ▼
+Node At Pod Capacity
+        │
+        ▼
+New Pod Stuck Pending
+        │
+        ▼
+Deployment Failed
+```
+
+Future requirements:
+
+- Cluster Autoscaler
+- Node-group scaling policies
+- Pod-capacity monitoring
+- Deployment-capacity validation
+- Capacity-related alerts
+
+Example alerts:
+```text
+Node Pod Capacity Exhausted
+
+Pods Pending > 5 Minutes
+
+Unschedulable Workloads
+```
 ---
 
 # Reliability Design
@@ -333,11 +434,40 @@ Current and planned controls:
 - Managed node groups
 - Rolling deployments
 - Durable object storage
+- Upload retry mechanisms
+- Failure backlog monitoring
 - Alerting
 - Capacity planning
 - Disaster recovery testing
+- Pod capacity monitoring
+- Fault injection validation
 
 ---
+
+## Upload Durability Requirement
+Recording segments must never be discarded solely because an upload failure occurred.
+
+Production target:
+```text
+Upload Failure
+        │
+        ▼
+Retain Recording
+        │
+        ▼
+Retry Upload
+        │
+        ▼
+Eventual Success
+```
+Data loss resulting from:
+
+- Pod restart
+- Node failure
+- Rolling deployment
+- Credential outage
+
+must be prevented through durable local storage and retry workflows.
 
 ## Failure Domains
 
@@ -444,6 +574,10 @@ Node Not Ready
 Pods Pending > 5 Minutes
 
 Cluster Capacity Exhausted
+
+KubeletTooManyPods
+
+FailedScheduling Events
 ```
 
 ---
@@ -456,8 +590,10 @@ Cluster Capacity Exhausted
 | Uploads     | Upload failure rate |
 | Performance | Upload latency      |
 | Reliability | Retry count         |
+| Reliability | Retry success rate  |
 | Throughput  | Segments processed  |
 | Delivery    | Upload backlog      |
+| Delivery    | Recovery backlog age|
 
 Example Alerts:
 
@@ -465,6 +601,12 @@ Example Alerts:
 Upload Failure Rate Above Threshold
 
 Upload Latency Exceeds SLO
+
+Upload Failure Rate Above Threshold
+
+Upload Backlog Growing
+
+Recovery Backlog Age Exceeds Threshold
 ```
 
 ---
@@ -478,6 +620,7 @@ Upload Latency Exceeds SLO
 | Streams | Timeout rates               |
 | AWS     | S3 connectivity             |
 | AWS     | STS authentication failures |
+| AWS     | IRSA authentication failures|
 
 Example Alerts:
 
@@ -487,6 +630,8 @@ Station Stream Unreachable
 DNS Failure Rate High
 
 AWS Credential Failure
+
+IRSA Authentication Failure
 ```
 
 ---
@@ -516,6 +661,7 @@ Upload Failures Detected
 | Area         | Signals to Monitor     |
 | ------------ | ---------------------- |
 | Prometheus   | Scrape health          |
+| Prometheus   | Rule Evaluation        |
 | Grafana      | Dashboard availability |
 | AlertManager | Alert delivery         |
 | Logging      | Log ingestion health   |
@@ -556,6 +702,42 @@ vs
 
 Missing Recordings
 ```
+
+## Business Health Monitoring
+Alert validation showed that platform health and business health are not the same thing.
+
+Example
+```text
+Pod Healthy
+        │
+        ▼
+Uploads Failing
+        │
+        ▼
+Business Failure
+```
+Therefore monitoring must include:
+
+Infrastructure Health:
+```text
+CPU
+Memory
+Pods
+Nodes
+```
+and Business Health:
+```text
+Recording Availability
+
+Upload Success Rate
+
+Missing Recordings
+
+Recording Freshness
+
+Recovery Backlog
+```
+Business health metrics take precedence over infrastructure metrics when assessing customer impact.
 
 ---
 
@@ -653,12 +835,18 @@ The platform supports:
 
 Key runbooks should include:
 
+Key runbooks should include:
+
 - Recorder Pod Failure
 - Station Stream Failure
 - S3 Upload Failure
+- IRSA Authentication Failure
+- Upload Backlog Recovery
 - EKS Node Failure
+- Cluster Capacity Exhaustion
 - High Restart Rate
 - Missing Recording Investigation
+- Alert Validation Procedures
 - Disaster Recovery Testing
 
 ---
@@ -691,24 +879,53 @@ Key runbooks should include:
 
 ✅ End-to-End Upload Pipeline
 
-✅ S3 Storage Validation
+✅ Health Probes
 
-✅ Production-style Logging
+✅ Prometheus Metrics
+
+✅ Grafana Dashboards
+
+✅ ServiceMonitor Integration
+
+✅ PrometheusRule Alerting
+
+✅ Alert Validation
+
+✅ Generator Outage Detection
+
+✅ Upload Failure Detection
+
+✅ Upload Failure Rate Detection
+
+✅ CPU Utilisation Detection
+
+✅ Production-Style Logging
+
+✅ Operational Runbooks
 
 ---
 
 ## Next Deliverables
 
-- Prometheus
-- Grafana
-- AlertManager
+- AlertManager Integration
 - Recording Gap Detection Service
+- Upload Retry Framework
+- Durable Temporary Storage
+- Upload Backlog Monitoring
 - Service Level Objectives (SLOs)
 - Error Budgets
-- Operational Runbooks
+- Metrics Server
+- Multi-Node Cluster Validation
 - Production CI/CD Pipeline
-- Disaster Recovery Testing
 
+The most important additions are:
+
+1. Durable upload recovery.
+2. Retry architecture.
+3. Capacity-aware deployments.
+4. IRSA failure handling.
+5. Business-health monitoring.
+Recovery backlog observability.
 ---
 
 # Technology Stack
