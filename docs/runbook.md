@@ -18,6 +18,7 @@ This runbook restores:
 - Grafana
 - Dashboarding
 - Health Checks
+- Prometheus Alerting
 
 ---
 
@@ -219,6 +220,22 @@ Expected:
 synthetic-generator
 ```
 
+Verify IRSA annotation:
+
+```powershell
+kubectl get sa `
+synthetic-generator `
+-n radio-platform `
+-o yaml |
+Select-String "role-arn" -Context 0,1
+```
+
+Expected:
+
+```text
+eks.amazonaws.com/role-arn
+```
+
 ---
 
 # 10. Deploy Application
@@ -226,7 +243,7 @@ synthetic-generator
 Verify deployment image:
 
 ```yaml
-image: 548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:<image_version_vX.X.X>
+image: 548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:<image_version>
 ```
 
 Deploy:
@@ -247,16 +264,43 @@ Expected:
 ```text
 1/1 Running
 ```
-### If more pods required for deployment...
-If needing to scale a deployment to make room, check which deployments can be scaled down:
+
+Verify rollout completion:
+
 ```powershell
-kubectl get deployments -A
+kubectl rollout status deployment/synthetic-generator `
+-n radio-platform
 ```
-Then scale down and up as needed:
+
+Expected:
+
+```text
+successfully rolled out
+```
+
+### If rollout fails
+
+Check deployment events:
+
 ```powershell
-kubectl scale deployment <name> `
---replicas=<> `
--n <namespace>
+kubectl describe deployment `
+synthetic-generator `
+-n radio-platform
+```
+
+Check pod events:
+
+```powershell
+kubectl describe pod <pod-name> `
+-n radio-platform |
+Select-String "Events:" -Context 0,20
+```
+
+Example issue discovered during testing:
+
+```text
+FailedScheduling
+Too many pods
 ```
 
 ---
@@ -311,9 +355,32 @@ Upload successful
 
 ---
 
-# 13. Verify S3 Uploads
+# 13. Verify IRSA Credentials
 
-Verify s3 bucket exists:
+Verify the pod is using IRSA:
+
+```powershell
+kubectl exec `
+-n radio-platform `
+<pod-name> `
+-- env | findstr AWS
+```
+
+Expected:
+
+```text
+AWS_ROLE_ARN
+AWS_WEB_IDENTITY_TOKEN_FILE
+AWS_REGION
+```
+
+This confirms pod identity is being supplied through IRSA.
+
+---
+
+# 14. Verify S3 Uploads
+
+Verify bucket exists:
 
 ```powershell
 aws s3 ls
@@ -325,7 +392,7 @@ Check logs for:
 Upload successful
 ```
 
-or verify directly:
+Or verify directly:
 
 ```powershell
 aws s3 ls `
@@ -343,7 +410,7 @@ station-003/...
 
 ---
 
-# 14. Create Monitoring Namespace
+# 15. Create Monitoring Namespace
 
 ```powershell
 kubectl create namespace monitoring
@@ -359,7 +426,7 @@ Continue.
 
 ---
 
-# 15. Install kube-prometheus-stack
+# 16. Install kube-prometheus-stack
 
 Add Helm repository:
 
@@ -384,7 +451,7 @@ prometheus-community/kube-prometheus-stack `
 
 ---
 
-# 16. Wait For Monitoring Components
+# 17. Wait For Monitoring Components
 
 ```powershell
 kubectl get pods `
@@ -415,7 +482,7 @@ Running
 
 ---
 
-# 17. Deploy ServiceMonitor
+# 18. Deploy ServiceMonitor
 
 Apply:
 
@@ -436,9 +503,49 @@ Without this label Prometheus will not discover the ServiceMonitor.
 
 ---
 
-# 18. Verify Prometheus
+# 19. Deploy PrometheusRule Alerts
+
+Apply alert rules:
+
+```powershell
+kubectl apply `
+-f observability/prometheus-rules.yaml
+```
+
+Verify:
+
+```powershell
+kubectl get prometheusrules `
+-n monitoring
+```
+
+Expected:
+
+```text
+radio-platform-alerts
+```
+
+Verify labels:
+
+```powershell
+kubectl get prometheusrule `
+radio-platform-alerts `
+-n monitoring `
+--show-labels
+```
+
+Expected:
+
+```text
+release=monitoring
+```
+
+---
+
+# 20. Verify Prometheus
 
 Port-forward:
+
 ```powershell
 kubectl port-forward `
 -n monitoring `
@@ -468,9 +575,23 @@ station-002
 station-003
 ```
 
+Verify alert rule group:
+
+```text
+Status
+↓
+Rules
+```
+
+Expected:
+
+```text
+radio-platform.rules
+```
+
 ---
 
-# 19. Get Grafana Password
+# 21. Get Grafana Password
 
 Retrieve password:
 
@@ -492,7 +613,7 @@ admin
 
 ---
 
-# 20. Access Grafana
+# 22. Access Grafana
 
 Port-forward:
 
@@ -518,7 +639,7 @@ admin
 
 ---
 
-# 21. Import Dashboard
+# 23. Import Dashboard
 
 Navigate:
 
@@ -544,7 +665,7 @@ Dashboard loads successfully
 
 ---
 
-# 22. Verify Health Endpoints
+# 24. Verify Health Endpoints
 
 Port-forward:
 
@@ -597,6 +718,209 @@ recordings_generated_total
 
 ---
 
+# 25. Alert Validation
+
+The following operational alert tests have been validated.
+
+## GeneratorPodDown
+
+Validation:
+
+```powershell
+kubectl scale deployment synthetic-generator `
+--replicas=0 `
+-n radio-platform
+```
+
+Expected:
+
+```text
+GeneratorPodDown
+FIRING
+```
+
+Restore:
+
+```powershell
+kubectl scale deployment synthetic-generator `
+--replicas=1 `
+-n radio-platform
+```
+
+---
+
+## UploadFailuresDetected
+
+Validation:
+
+Break IRSA role temporarily.
+
+Verify:
+
+```text
+AssumeRoleWithWebIdentity
+AccessDenied
+```
+
+in application logs.
+
+Expected:
+
+```text
+UploadFailuresDetected
+FIRING
+```
+
+---
+
+## UploadFailureRateHigh
+
+Expected after repeated upload failures:
+
+```text
+UploadFailureRateHigh
+FIRING
+```
+
+---
+
+## HighCpuUsage
+
+Validation:
+
+```powershell
+kubectl exec -it `
+-n radio-platform `
+<pod-name> `
+-- sh
+```
+
+Run:
+
+```sh
+yes > /dev/null
+```
+
+Expected:
+
+```text
+HighCpuUsage
+PENDING
+→
+FIRING
+```
+
+Stop:
+
+```sh
+Ctrl+C
+```
+
+---
+
+# Troubleshooting
+
+## Deployment Rollout Stalled
+
+Check:
+
+```powershell
+kubectl rollout status deployment/synthetic-generator `
+-n radio-platform
+```
+
+If:
+
+```text
+deployment exceeded its progress deadline
+```
+
+Investigate scheduling:
+
+```powershell
+kubectl describe pod <pod-name> `
+-n radio-platform |
+Select-String "Events:" -Context 0,20
+```
+
+Example:
+
+```text
+FailedScheduling
+Too many pods
+```
+
+---
+
+## ServiceMonitor Not Scraping
+
+Verify ServiceMonitor label:
+
+```yaml
+release: monitoring
+```
+
+Verify Prometheus selector:
+
+```powershell
+kubectl get prometheus `
+monitoring-kube-prometheus-prometheus `
+-n monitoring `
+-o yaml |
+Select-String "serviceMonitorSelector" -Context 0,5
+```
+
+---
+
+## PrometheusRule Not Loaded
+
+Verify labels:
+
+```powershell
+kubectl get prometheusrule `
+radio-platform-alerts `
+-n monitoring `
+--show-labels
+```
+
+Expected:
+
+```text
+release=monitoring
+```
+
+Verify rule selector:
+
+```powershell
+kubectl get prometheus `
+monitoring-kube-prometheus-prometheus `
+-n monitoring `
+-o yaml |
+Select-String "ruleSelector" -Context 0,5
+```
+
+---
+
+## Metrics API Not Available
+
+Current platform status:
+
+```text
+kubectl top
+```
+
+returns:
+
+```text
+Metrics API not available
+```
+
+Metrics Server is not currently installed.
+
+Prometheus remains the source of truth for resource monitoring.
+
+---
+
 # Platform Operational Checklist
 
 Infrastructure:
@@ -622,6 +946,8 @@ Application:
 
 ✅ Service Account Created
 
+✅ IRSA Verified
+
 ✅ Application Running
 
 ✅ Uploads Reaching S3
@@ -636,6 +962,8 @@ Observability:
 
 ✅ ServiceMonitor Working
 
+✅ PrometheusRule Loaded
+
 ✅ Metrics Scraped
 
 ✅ Dashboard Imported
@@ -643,31 +971,50 @@ Observability:
 ✅ Health Checks Working
 ```
 
+Alerting:
+
+```text
+✅ GeneratorPodDown Validated
+
+✅ UploadFailuresDetected Validated
+
+✅ UploadFailureRateHigh Validated
+
+✅ HighCpuUsage Validated
+```
+
 ---
 
 # Current Version
 
 ```text
-v0.5.4
+v0.5.7
 
 Features:
 - Prometheus Metrics
 - Grafana Dashboards
+- PrometheusRule Alerting
+- Alert Validation
 - IRSA Authentication
 - Health Endpoints
 - Liveness Probe
 - Readiness Probe
+- Startup Probe
 - Resource Requests & Limits
+- Fault Injection Testing
 ```
 
 ---
 
 # Next Development Milestones
 
-1. AlertManager Rules
-2. Grafana Alerting
+1. AlertManager Integration
+2. Incident Response Runbooks
 3. Recording Gap Detector Service
 4. Business Health Metrics
-5. SLO Monitoring
-6. Auto-Provision Dashboard via ConfigMap
-7. Observability-as-Code
+5. Durable Upload Recovery
+6. Upload Retry Workflows
+7. SLO Monitoring
+8. Metrics Server Deployment
+9. Auto-Provision Dashboard via ConfigMap
+10. Observability-as-Code
