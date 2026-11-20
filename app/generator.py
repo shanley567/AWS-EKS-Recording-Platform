@@ -178,6 +178,18 @@ generation_cycle_duration_seconds = Histogram(
     "Time taken to complete a generation cycle"
 )
 
+latest_recording_timestamp = Gauge(
+    "latest_recording_timestamp",
+    "Unix timestamp of latest generated recording",
+    ["station"]
+)
+
+recording_age_seconds = Gauge(
+    "recording_age_seconds",
+    "Age of most recent recording in seconds",
+    ["station"]
+)
+
 # ------------------------------------------------------------------
 # FLASK APP
 # ------------------------------------------------------------------
@@ -386,6 +398,23 @@ while True:
 
             "status": "SUCCESS"
         }
+
+        # ----------------------------------------------------------
+        # Business-health tracking
+        # These metrics enable future gap detection.
+        # ----------------------------------------------------------
+
+        current_timestamp = time.time()
+
+        latest_recording_timestamp.labels(
+            station=station_id
+        ).set(
+            current_timestamp
+        )
+
+        recording_age_seconds.labels(
+            station=station_id
+        ).set(0)
 
         station_dir = OUTPUT_DIR / station_id
 
