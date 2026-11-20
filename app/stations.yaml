@@ -1,5 +1,33 @@
 stations:
-  - station-001
-  - station-002
-  - station-003
-  - station-004
+
+  - id: station-001
+    name: BBC Radio 1
+    stream_url: https://example.com/radio1
+    country: UK
+    genre: Music
+    enabled: true
+    segment_duration_seconds: 60
+
+  - id: station-002
+    name: BBC Radio 2
+    stream_url: https://example.com/radio2
+    country: UK
+    genre: Music
+    enabled: true
+    segment_duration_seconds: 60
+
+  - id: station-003
+    name: BBC Radio 4
+    stream_url: https://example.com/radio4
+    country: UK
+    genre: News
+    enabled: true
+    segment_duration_seconds: 60
+
+  - id: station-004
+    name: BBC Radio 5 Live
+    stream_url: https://example.com/radio5
+    country: UK
+    genre: Sport
+    enabled: true
+    segment_duration_seconds: 60

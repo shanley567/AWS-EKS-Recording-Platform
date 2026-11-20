@@ -39,16 +39,33 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------
 
 
-def load_stations() -> list[str]:
+def load_stations() -> list[dict]:
     """
-    Load stations from YAML configuration.
+    Load station configuration from YAML.
 
     Expected format:
 
     stations:
-      - station-001
-      - station-002
-      - station-003
+
+      - id: station-001
+        name: BBC Radio 1
+        stream_url: https://example.com/radio1
+        country: UK
+        genre: Music
+        enabled: true
+        segment_duration_seconds: 60
+
+    Stations are represented as configuration
+    objects rather than simple strings.
+
+    This enables future capabilities such as:
+
+    - Real radio stream recording
+    - Recording gap detection
+    - Per-station monitoring
+    - Station registry migration
+    - Station-specific alerting
+    - Controller-based recorder deployment
     """
 
     if not STATIONS_FILE.exists():
@@ -76,7 +93,48 @@ def load_stations() -> list[str]:
             "No stations configured in stations.yaml"
         )
 
-    return sorted(stations)
+    validated_stations = []
+
+    for station in stations:
+
+        # Ensure every station provides the minimum
+        # metadata required by the platform.
+        #
+        # These fields are intentionally validated
+        # here so that bad configuration causes the
+        # application to fail fast during startup.
+        required_fields = [
+            "id",
+            "name",
+            "stream_url",
+            "country",
+            "genre",
+            "enabled",
+            "segment_duration_seconds"
+        ]
+
+        missing_fields = [
+            field
+            for field in required_fields
+            if field not in station
+        ]
+
+        if missing_fields:
+            raise ValueError(
+                f"Station "
+                f"'{station.get('id', 'unknown')}' "
+                f"is missing required fields: "
+                f"{', '.join(missing_fields)}"
+            )
+
+        validated_stations.append(station)
+
+    # Sort stations by id to ensure deterministic
+    # processing order across restarts and deployments.
+    return sorted(
+        validated_stations,
+        key=lambda station: station["id"]
+    )
 
 
 STATIONS = load_stations()
@@ -264,14 +322,72 @@ while True:
 
     for station in STATIONS:
 
+        # ----------------------------------------------------------
+        # Extract station metadata
+        #
+        # Stations are now represented as configuration
+        # objects rather than simple strings.
+        #
+        # This metadata will support:
+        #
+        # - Real stream recording
+        # - Recording gap detection
+        # - Per-station dashboards
+        # - Station registry migration
+        # - Station-specific alerting
+        # ----------------------------------------------------------
+
+        station_id = station["id"]
+        station_name = station["name"]
+        country = station["country"]
+        genre = station["genre"]
+
+        # ----------------------------------------------------------
+        # Allow stations to remain configured while
+        # being operationally disabled.
+        #
+        # Future use cases:
+        #
+        # - Maintenance windows
+        # - Stream decommissioning
+        # - Temporary suspension
+        # ----------------------------------------------------------
+
+        if not station["enabled"]:
+
+            logger.info(
+                "Station skipped | station_id=%s enabled=false",
+                station_id
+            )
+
+            continue
+
         payload = {
-            "station_id": station,
-            "timestamp": datetime.now(UTC).isoformat(),
-            "signal_strength": random.randint(80, 100),
+
+            # Unique station identifier used by the platform.
+            "station_id": station_id,
+
+            # Human-readable station metadata.
+            "station_name": station_name,
+            "country": country,
+            "genre": genre,
+
+            # Recording timestamp.
+            "timestamp": datetime.now(
+                UTC
+            ).isoformat(),
+
+            # Synthetic metric used to simulate
+            # recording quality.
+            "signal_strength": random.randint(
+                80,
+                100
+            ),
+
             "status": "SUCCESS"
         }
 
-        station_dir = OUTPUT_DIR / station
+        station_dir = OUTPUT_DIR / station_id
 
         station_dir.mkdir(
             parents=True,
@@ -292,12 +408,23 @@ while True:
             )
 
         recordings_generated_total.labels(
-            station=station
+            station=station_id
         ).inc()
 
         logger.info(
-            "Recording generated | station=%s file=%s signal_strength=%s",
-            station,
+            (
+                "Recording generated | "
+                "station_id=%s "
+                "station_name=%s "
+                "country=%s "
+                "genre=%s "
+                "file=%s "
+                "signal_strength=%s"
+            ),
+            station_id,
+            station_name,
+            country,
+            genre,
             filename,
             payload["signal_strength"]
         )
@@ -306,30 +433,54 @@ while True:
 
             upload_file(
                 filename,
-                station
+                station_id
             )
 
             s3_upload_success_total.labels(
-                station=station
+                station=station_id
             ).inc()
+
+            # ------------------------------------------------------
+            # Local files are removed only after a successful
+            # upload to S3.
+            #
+            # This behaviour was validated during IRSA fault
+            # testing where failed uploads remained available
+            # inside the pod filesystem.
+            #
+            # Future production architecture should replace
+            # pod-local storage with durable storage such as:
+            #
+            # - Amazon EFS
+            # - Persistent Volumes
+            #
+            # to ensure failed uploads survive pod replacement.
+            # ------------------------------------------------------
 
             filename.unlink()
 
             logger.info(
                 "Local file deleted | station=%s file=%s",
-                station,
+                station_id,
                 filename
             )
 
         except Exception as error:
 
             s3_upload_failure_total.labels(
-                station=station
+                station=station_id
             ).inc()
 
             logger.exception(
-                "Upload failed | station=%s file=%s error=%s",
-                station,
+                (
+                    "Upload failed | "
+                    "station_id=%s "
+                    "station_name=%s "
+                    "file=%s "
+                    "error=%s"
+                ),
+                station_id,
+                station_name,
                 filename,
                 str(error)
             )
@@ -344,8 +495,18 @@ while True:
     )
 
     logger.info(
-        "Generation cycle completed | stations_processed=%s duration_seconds=%s",
-        len(STATIONS),
+        (
+            "Generation cycle completed | "
+            "stations_processed=%s "
+            "duration_seconds=%s"
+        ),
+        len(
+            [
+                station
+                for station in STATIONS
+                if station["enabled"]
+            ]
+        ),
         cycle_duration
     )
 
