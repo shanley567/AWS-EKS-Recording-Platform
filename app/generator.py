@@ -13,8 +13,10 @@ from prometheus_client import (
     CONTENT_TYPE_LATEST,
     Counter,
     Histogram,
-    generate_latest
+    generate_latest,
+    Gauge
 )
+from pathlib import Path
 
 # ------------------------------------------------------------------
 # CONFIGURATION
@@ -22,7 +24,8 @@ from prometheus_client import (
 
 BUCKET_NAME = "jsp-radio-recordings-bucket-2026-demo"
 
-STATIONS_FILE = Path("/app/stations.yaml")
+APP_DIR = Path(__file__).parent
+STATIONS_FILE = APP_DIR / "stations.yaml"
 
 OUTPUT_DIR = Path("output")
 OUTPUT_DIR.mkdir(exist_ok=True)
@@ -184,12 +187,6 @@ latest_recording_timestamp = Gauge(
     ["station"]
 )
 
-recording_age_seconds = Gauge(
-    "recording_age_seconds",
-    "Age of most recent recording in seconds",
-    ["station"]
-)
-
 # ------------------------------------------------------------------
 # FLASK APP
 # ------------------------------------------------------------------
@@ -311,7 +308,13 @@ logger.info("===================================================")
 logger.info("Synthetic Generator Starting")
 logger.info("Bucket: %s", BUCKET_NAME)
 logger.info("Stations Configured: %s", len(STATIONS))
-logger.info("Station List: %s", ", ".join(STATIONS))
+logger.info(
+    "Station List: %s",
+    ", ".join(
+        f"\n{station['id']} ({station['name']})"
+        for station in STATIONS
+    )
+)
 logger.info("Output Directory: %s", OUTPUT_DIR.absolute())
 logger.info("Metrics Endpoint: http://0.0.0.0:8000/metrics")
 logger.info("Liveness Endpoint: http://0.0.0.0:8000/health/live")
@@ -411,10 +414,6 @@ while True:
         ).set(
             current_timestamp
         )
-
-        recording_age_seconds.labels(
-            station=station_id
-        ).set(0)
 
         station_dir = OUTPUT_DIR / station_id
 
@@ -553,7 +552,6 @@ while True:
     #
     # RecordingGapDetected
     #
-    # recording_age_seconds > 300
     # --------------------------------------------------------------
 
     current_time = time.time()
@@ -568,11 +566,5 @@ while True:
         latest_timestamp = latest_recording_timestamp.labels(
             station=station_id
         )._value.get()
-
-        recording_age_seconds.labels(
-            station=station_id
-        ).set(
-            current_time - latest_timestamp
-        )
 
     time.sleep(60)

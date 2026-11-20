@@ -29,5 +29,5 @@ stations:
     stream_url: https://example.com/radio5
     country: UK
     genre: Sport
-    enabled: true
+    enabled: True
     segment_duration_seconds: 60

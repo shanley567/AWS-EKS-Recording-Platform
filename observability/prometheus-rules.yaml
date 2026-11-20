@@ -143,3 +143,21 @@ spec:
           annotations:
             summary: Upload failure rate high
             description: More than 1 percent of uploads are failing.
+        # ----------------------------------------------------------
+        # Business-health alert.
+        #
+        # A healthy pod does not necessarily mean
+        # recordings are being produced.
+        #
+        # This alert measures whether recordings
+        # are still being generated.
+        # ----------------------------------------------------------
+        
+        - alert: RecordingGapDetected
+          expr: (time() - latest_recording_timestamp) > 120
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: Recording gap detected
+            description: Station has not produced a recording for more than 1 minutes.
