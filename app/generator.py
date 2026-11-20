@@ -543,4 +543,36 @@ while True:
         "Sleeping before next cycle | sleep_seconds=60"
     )
 
+        # --------------------------------------------------------------
+    # Update recording age metrics.
+    #
+    # This continuously calculates how old the
+    # latest recording is for every station.
+    #
+    # Future alert:
+    #
+    # RecordingGapDetected
+    #
+    # recording_age_seconds > 300
+    # --------------------------------------------------------------
+
+    current_time = time.time()
+
+    for station in STATIONS:
+
+        if not station["enabled"]:
+            continue
+
+        station_id = station["id"]
+
+        latest_timestamp = latest_recording_timestamp.labels(
+            station=station_id
+        )._value.get()
+
+        recording_age_seconds.labels(
+            station=station_id
+        ).set(
+            current_time - latest_timestamp
+        )
+
     time.sleep(60)
