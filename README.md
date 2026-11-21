@@ -847,3 +847,8 @@ Always verify:
 For detailed architecture, requirements, observability strategy, reliability design, and future platform evolution:
 
 **docs/design-documentation.md**
+
+
+## CI/CD
+
+GitHub Actions validates application, infrastructure and observability changes before merge.
