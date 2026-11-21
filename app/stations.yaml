@@ -1,6 +1,6 @@
 stations:
 
-  - id: station-001
+  # - id: station-001
     name: BBC Radio 1
     stream_url: https://example.com/radio1
     country: UK
