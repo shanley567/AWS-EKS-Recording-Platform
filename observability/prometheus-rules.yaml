@@ -151,13 +151,22 @@ spec:
         #
         # This alert measures whether recordings
         # are still being generated.
+
+        # Shortgap required for alert to fire for faster testing
         # ----------------------------------------------------------
         
         - alert: RecordingGapDetected
-          expr: (time() - latest_recording_timestamp) > 120
+
+          expr: |
+            (time() - latest_recording_timestamp) > 120
           for: 1m
+
           labels:
-            severity: critical
+            severity: warning
+
           annotations:
             summary: Recording gap detected
-            description: Station has not produced a recording for more than 1 minutes.
+
+            description: >
+              Station {{ $labels.station }}
+              has not produced a recording recently.

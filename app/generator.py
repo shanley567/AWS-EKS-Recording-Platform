@@ -30,6 +30,29 @@ STATIONS_FILE = APP_DIR / "stations.yaml"
 OUTPUT_DIR = Path("output")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
+# ------------------------------------------------------------------
+# TESTING CONFIGURATION
+# ------------------------------------------------------------------
+
+# Temporary fault injection used when validating
+# RecordingGapDetected alerting.
+#
+# Set to:
+#
+# None
+#
+# for normal operation.
+#
+# Example:
+#
+# "station-004"
+#
+# to simulate a station that has stopped
+# generating new recordings.
+#
+# FAULT_INJECTION_STATION = "station-004"
+FAULT_INJECTION_STATION = None
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)-8s %(message)s"
@@ -184,6 +207,12 @@ generation_cycle_duration_seconds = Histogram(
 latest_recording_timestamp = Gauge(
     "latest_recording_timestamp",
     "Unix timestamp of latest generated recording",
+    ["station"]
+)
+
+latest_successful_upload_timestamp = Gauge(
+    "latest_successful_upload_timestamp",
+    "Unix timestamp of latest successful S3 upload",
     ["station"]
 )
 
@@ -457,6 +486,29 @@ while True:
             payload["signal_strength"]
         )
 
+        # ----------------------------------------------------------
+        # Temporary fault injection.
+        #
+        # Simulates a recording gap for a single
+        # station while the application and other
+        # stations continue operating normally.
+        #
+        # Used only for alert validation.
+        # ----------------------------------------------------------
+
+        if (
+            FAULT_INJECTION_STATION is not None
+            and station_id == FAULT_INJECTION_STATION
+        ):
+
+            logger.warning(
+                "Fault injection active | station_id=%s",
+                station_id
+            )
+
+            continue
+        
+
         try:
 
             upload_file(
@@ -467,6 +519,15 @@ while True:
             s3_upload_success_total.labels(
                 station=station_id
             ).inc()
+
+            upload_timestamp = datetime.now(UTC).timestamp()
+
+            logger.info(
+                "Upload timestamp metric updated | station=%s timestamp=%s",
+                station_id,
+                upload_timestamp
+            )
+
 
             # ------------------------------------------------------
             # Local files are removed only after a successful
@@ -541,30 +602,5 @@ while True:
     logger.info(
         "Sleeping before next cycle | sleep_seconds=60"
     )
-
-        # --------------------------------------------------------------
-    # Update recording age metrics.
-    #
-    # This continuously calculates how old the
-    # latest recording is for every station.
-    #
-    # Future alert:
-    #
-    # RecordingGapDetected
-    #
-    # --------------------------------------------------------------
-
-    current_time = time.time()
-
-    for station in STATIONS:
-
-        if not station["enabled"]:
-            continue
-
-        station_id = station["id"]
-
-        latest_timestamp = latest_recording_timestamp.labels(
-            station=station_id
-        )._value.get()
 
     time.sleep(60)
