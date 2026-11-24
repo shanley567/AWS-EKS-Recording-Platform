@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 
 metadata:
+
   # Name of the Kubernetes Deployment resource.
   name: synthetic-generator
 
@@ -10,27 +11,25 @@ metadata:
 
 spec:
 
-  # Number of application pods to run.
-  # For this project a single replica is sufficient.
+  # Single replica is currently sufficient.
   replicas: 1
 
-  # Number of previous ReplicaSets retained for rollback.
+  # Number of previous ReplicaSets retained.
   revisionHistoryLimit: 5
 
-  # Defines how Kubernetes performs updates.
+  # Deployment update strategy.
   strategy:
     type: RollingUpdate
 
     rollingUpdate:
-      # Create one additional pod during deployment.
-      # Prevents downtime during upgrades.
+
+      # Create one additional pod during rollout.
       maxSurge: 1
 
-      # Never take the existing pod offline before
-      # the replacement pod is healthy.
+      # Existing pod remains available during upgrade.
       maxUnavailable: 0
 
-  # Deployment manages pods matching this label.
+  # Deployment manages these matching pods.
   selector:
     matchLabels:
       app: synthetic-generator
@@ -46,24 +45,41 @@ spec:
     spec:
 
       # Service account used for IRSA authentication.
-      # Allows pod access to S3 without AWS access keys.
       serviceAccountName: synthetic-generator
 
-      # Gives the application time to finish work
-      # before a pod is terminated.
+      # Allow time for graceful shutdown.
       terminationGracePeriodSeconds: 30
 
-      # Basic pod security hardening.
+      # Pod security hardening.
       securityContext:
 
-        # Prevents the container running as root.
+        # Prevent root execution.
         runAsNonRoot: true
-        
-          # Explicit UID of the application user.
+
+        # Explicit runtime user.
         runAsUser: 1000
 
-        # Explicit GID of the application user.
+        # Explicit runtime group.
         runAsGroup: 1000
+
+      # --------------------------------------------------
+      # Persistent storage.
+      #
+      # Generated recordings are written to a persistent
+      # volume instead of the container filesystem.
+      #
+      # This allows failed uploads to survive:
+      #
+      # - Pod restarts
+      # - Rolling deployments
+      # - Crash recovery
+      # --------------------------------------------------
+      volumes:
+
+        - name: generator-storage
+
+          persistentVolumeClaim:
+            claimName: generator-storage
 
       containers:
 
@@ -72,35 +88,42 @@ spec:
           # Image stored in Amazon ECR.
           image: 548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:v0.6.2
 
-          # Always pull the latest image for this tag.
+          # Always pull latest image for tag.
           imagePullPolicy: Always
 
           ports:
 
-            # Port serving:
-            # - /metrics
-            # - /health/live
-            # - /health/ready
+            # Metrics and health endpoints.
             - name: metrics
               containerPort: 8000
 
-          # Startup probe prevents liveness checks from
-          # killing the pod during application startup.
+          # ------------------------------------------------
+          # Persistent recording storage mount.
+          #
+          # Application writes recordings to:
+          #
+          # /data/output
+          #
+          # rather than container-local storage.
+          # ------------------------------------------------
+          volumeMounts:
+
+            - name: generator-storage
+              mountPath: /data
+
+          # Startup probe.
           startupProbe:
 
             httpGet:
               path: /health/live
               port: 8000
 
-            # Allow up to:
+            # Allow:
             # 30 × 5 seconds = 150 seconds startup time
             failureThreshold: 30
             periodSeconds: 5
 
-          # Liveness probe verifies the application
-          # process is still running.
-          #
-          # Failure causes Kubernetes to restart the pod.
+          # Liveness probe.
           livenessProbe:
 
             httpGet:
@@ -112,11 +135,7 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
 
-          # Readiness probe verifies the application is
-          # ready to receive traffic and access AWS services.
-          #
-          # Failure removes the pod from service routing
-          # without restarting it.
+          # Readiness probe.
           readinessProbe:
 
             httpGet:
@@ -129,9 +148,6 @@ spec:
             failureThreshold: 3
 
           # Resource governance.
-          #
-          # Requests reserve capacity on a node.
-          # Limits prevent runaway resource consumption.
           resources:
 
             requests:
