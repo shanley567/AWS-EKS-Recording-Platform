@@ -1,6 +1,14 @@
-# Persistent volume creation for the generator service
-# Used for temporary storage of generated files
-# If unable to upload to s3 before retries
+# --------------------------------------------------
+# Durable storage used to retain generated files
+# across pod restarts and rolling deployments.
+#
+# This PVC supports the current single-replica
+# architecture.
+#
+# Future platform evolution may move toward
+# one recorder workload per station with
+# dedicated storage ownership.
+# --------------------------------------------------
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
