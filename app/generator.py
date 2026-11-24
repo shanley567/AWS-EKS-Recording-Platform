@@ -216,6 +216,22 @@ latest_successful_upload_timestamp = Gauge(
     ["station"]
 )
 
+# ----------------------------------------------------------
+# Initialise upload timestamp metrics.
+#
+# This keeps metric series visible even if uploads stop.
+# ----------------------------------------------------------
+
+initial_timestamp = time.time()
+
+for station in STATIONS:
+
+    latest_successful_upload_timestamp.labels(
+        station=station["id"]
+    ).set(
+        initial_timestamp
+    )
+
 # ------------------------------------------------------------------
 # FLASK APP
 # ------------------------------------------------------------------
@@ -521,6 +537,12 @@ while True:
             ).inc()
 
             upload_timestamp = datetime.now(UTC).timestamp()
+
+            latest_successful_upload_timestamp.labels(
+                station=station_id
+            ).set(
+                upload_timestamp
+            )
 
             logger.info(
                 "Upload timestamp metric updated | station=%s timestamp=%s",

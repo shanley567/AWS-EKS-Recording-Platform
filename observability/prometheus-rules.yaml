@@ -158,15 +158,17 @@ spec:
         - alert: RecordingGapDetected
 
           expr: |
-            (time() - latest_recording_timestamp) > 120
-          for: 1m
+            (time() - latest_successful_upload_timestamp) > 300
+
+          for: 5m
 
           labels:
-            severity: warning
+            severity: critical
 
           annotations:
-            summary: Recording gap detected
+            summary: Recording delivery gap detected
 
             description: >
               Station {{ $labels.station }}
-              has not produced a recording recently.
+              has not successfully uploaded a recording
+              for more than two minutes.
