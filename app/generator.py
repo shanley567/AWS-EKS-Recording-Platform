@@ -27,7 +27,7 @@ BUCKET_NAME = "jsp-radio-recordings-bucket-2026-demo"
 APP_DIR = Path(__file__).parent
 STATIONS_FILE = APP_DIR / "stations.yaml"
 
-OUTPUT_DIR = Path("output")
+OUTPUT_DIR = Path("/data/output")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 # ------------------------------------------------------------------
