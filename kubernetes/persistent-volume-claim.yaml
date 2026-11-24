@@ -1,0 +1,14 @@
+# Persistent volume creation for the generator service
+# Used for temporary storage of generated files
+# If unable to upload to s3 before retries
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generator-storage
+  namespace: radio-platform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
