@@ -5,8 +5,8 @@
     "name": "adt4mww",
     "namespace": "default",
     "uid": "38e9b140-eace-4c99-940a-2347c0a4989d",
-    "resourceVersion": "1795534798516984",
-    "generation": 15,
+    "resourceVersion": "1795535811645989",
+    "generation": 17,
     "creationTimestamp": "2026-11-24T15:15:09Z",
     "labels": {
       "grafana.app/deprecatedInternalID": "4051427377643520"
@@ -15,7 +15,7 @@
       "grafana.app/createdBy": "user:eg5a0ufwfudq8b",
       "grafana.app/saved-from-ui": "Grafana v13.3.1 (da3aa3ff57)",
       "grafana.app/updatedBy": "user:eg5a0ufwfudq8b",
-      "grafana.app/updatedTimestamp": "2026-11-24T15:39:58Z"
+      "grafana.app/updatedTimestamp": "2026-11-24T15:56:51Z"
     }
   },
   "spec": {
@@ -2003,7 +2003,7 @@
             "kind": "RowsLayoutRow",
             "spec": {
               "title": "KPIs",
-              "collapse": false,
+              "collapse": true,
               "layout": {
                 "kind": "AutoGridLayout",
                 "spec": {
@@ -2065,7 +2065,7 @@
             "kind": "RowsLayoutRow",
             "spec": {
               "title": "Business Metrics",
-              "collapse": false,
+              "collapse": true,
               "layout": {
                 "kind": "AutoGridLayout",
                 "spec": {
@@ -2100,7 +2100,7 @@
             "kind": "RowsLayoutRow",
             "spec": {
               "title": "Platform Performance",
-              "collapse": false,
+              "collapse": true,
               "layout": {
                 "kind": "AutoGridLayout",
                 "spec": {
@@ -2135,7 +2135,7 @@
             "kind": "RowsLayoutRow",
             "spec": {
               "title": "Platform Health",
-              "collapse": false,
+              "collapse": true,
               "layout": {
                 "kind": "AutoGridLayout",
                 "spec": {
@@ -2197,7 +2197,7 @@
             "kind": "RowsLayoutRow",
             "spec": {
               "title": "Business Health",
-              "collapse": false,
+              "collapse": true,
               "layout": {
                 "kind": "AutoGridLayout",
                 "spec": {
@@ -2291,7 +2291,7 @@
       "hideTimepicker": false,
       "fiscalYearStartMonth": 0
     },
-    "title": "Total-Recordings-Generated",
+    "title": "Radio Recoding Platform",
     "variables": [],
     "preferences": {
       "layout": {
