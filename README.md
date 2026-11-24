@@ -31,6 +31,7 @@ Future roadmap items include live radio stream ingestion and production-grade me
 - Business-health monitoring using recording freshness metrics
 - Recording-gap detection through controlled fault injection
 - End-to-end alert lifecycle validation and recovery testing
+
 ---
 
 # Contents
@@ -132,7 +133,6 @@ GitHub Actions
               │
               ▼
      RecordingGapDetected
-
 ```
 
 The application uses IAM Roles for Service Accounts (IRSA) to access AWS services without embedding credentials inside pods.
@@ -467,6 +467,7 @@ Recording freshness is calculated using:
 
 ```promql
 time() - latest_successful_upload_timestamp
+```
 
 ---
 
@@ -488,6 +489,10 @@ time() - latest_successful_upload_timestamp
 
 ![Platform Health](<docs/Grafana%20Dashboard%20Snapshots/Platform%20Health.png>)
 
+#### Business Health
+
+![Buisness Health](<docs/Grafana%20Dashboard%20Snapshots/Business%20Health.png>)
+
 ---
 
 # Alerting
@@ -496,14 +501,14 @@ The platform includes custom PrometheusRule definitions designed to monitor both
 
 ## Implemented Alerts
 
-| Alert                   | Purpose                                     |
-| ------------------------| --------------------------------------------|
-| GeneratorPodDown        | Detect unavailable generator workloads      |
-| UploadFailuresDetected  | Detect failed S3 uploads                    |
-| UploadFailureRateHigh   | Detect elevated upload failure rates        |
-| HighCpuUsage            | Detect excessive CPU utilisation            |
-| HighMemoryUsage         | Detect excessive memory utilisation         |
-| RecordingGapDetected    | Detect stale or missing recording uploads   |
+| Alert                  | Purpose                                   |
+| ---------------------- | ----------------------------------------- |
+| GeneratorPodDown       | Detect unavailable generator workloads    |
+| UploadFailuresDetected | Detect failed S3 uploads                  |
+| UploadFailureRateHigh  | Detect elevated upload failure rates      |
+| HighCpuUsage           | Detect excessive CPU utilisation          |
+| HighMemoryUsage        | Detect excessive memory utilisation       |
+| RecordingGapDetected   | Detect stale or missing recording uploads |
 
 ## Alert Validation
 
@@ -880,15 +885,16 @@ Always verify:
 
 # Release Milestones
 
-| Release | Capability |
-|----------|----------|
-| v0.5.4 | Health probes, non-root containers, Grafana dashboard |
-| v0.5.5 | Dynamic station onboarding using stations.yaml |
-| v0.5.6 | Deployment-safe observability and operational KPIs |
-| v0.5.7 | Prometheus alerting and operational validation |
-| v0.6.2 | Recording freshness monitoring and business-health dashboards |
-| v0.6.3 | Recording gap detection and alert lifecycle validation |
--------------------------------------------------------------------
+| Release | Capability                                                    |
+| ------- | ------------------------------------------------------------- |
+| v0.5.4  | Health probes, non-root containers, Grafana dashboard         |
+| v0.5.5  | Dynamic station onboarding using stations.yaml                |
+| v0.5.6  | Deployment-safe observability and operational KPIs            |
+| v0.5.7  | Prometheus alerting and operational validation                |
+| v0.6.2  | Recording freshness monitoring and business-health dashboards |
+| v0.6.3  | Recording gap detection and alert lifecycle validation        |
+
+---
 
 # Roadmap
 
