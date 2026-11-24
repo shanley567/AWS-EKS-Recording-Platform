@@ -15,9 +15,22 @@ The platform demonstrates:
 - Operational runbooks and platform recovery
 - Configuration-driven workload management
 
-The current application generates **synthetic recording metadata**, uploads it to Amazon S3, and exposes operational metrics for monitoring and alerting. It does not yet capture live radio audio. The platform architecture and roadmap describe the future evolution toward radio stream ingestion, recording-gap detection, and production-grade media processing.
+The current application generates synthetic recording metadata, uploads it to Amazon S3, and exposes operational and business-health metrics for monitoring and alerting.
+
+Implemented capabilities include recording freshness monitoring, recording-gap detection, Prometheus alerting, and Grafana business-health dashboards.
+
+Future roadmap items include live radio stream ingestion and production-grade media processing.
 
 > **Design Reference:** [Solution Architecture and Design](docs/design-documentation.md)
+
+**Key validated capabilities:**
+
+- Kubernetes-based workload deployment on Amazon EKS
+- IRSA-based AWS authentication without static credentials
+- Prometheus and Grafana observability stack
+- Business-health monitoring using recording freshness metrics
+- Recording-gap detection through controlled fault injection
+- End-to-end alert lifecycle validation and recovery testing
 
 ---
 
@@ -43,30 +56,33 @@ The current application generates **synthetic recording metadata**, uploads it t
 
 # Project Status
 
-| Area | Status |
-|--------|--------|
-| AWS infrastructure provisioned with Terraform | ✅ Implemented |
-| Amazon EKS cluster and managed node group | ✅ Implemented |
-| Containerized Python synthetic generator | ✅ Implemented |
-| Kubernetes deployment and IRSA workload identity | ✅ Implemented |
-| Synthetic data uploaded to Amazon S3 | ✅ Implemented |
-| Configuration-driven station onboarding | ✅ Implemented |
-| Terraform validation in GitHub Actions | ✅ Implemented |
-| Docker build validation in GitHub Actions | ✅ Implemented |
-| Prometheus application metrics | ✅ Implemented |
-| Grafana operational dashboards | ✅ Implemented |
+| Area                                               | Status         |
+| -------------------------------------------------- | -------------- |
+| AWS infrastructure provisioned with Terraform      | ✅ Implemented |
+| Amazon EKS cluster and managed node group          | ✅ Implemented |
+| Containerized Python synthetic generator           | ✅ Implemented |
+| Kubernetes deployment and IRSA workload identity   | ✅ Implemented |
+| Synthetic data uploaded to Amazon S3               | ✅ Implemented |
+| Configuration-driven station onboarding            | ✅ Implemented |
+| Terraform validation in GitHub Actions             | ✅ Implemented |
+| Docker build validation in GitHub Actions          | ✅ Implemented |
+| Prometheus application metrics                     | ✅ Implemented |
+| Grafana operational dashboards                     | ✅ Implemented |
 | Kubernetes liveness, readiness, and startup probes | ✅ Implemented |
-| Non-root container execution | ✅ Implemented |
-| Operational runbooks | ✅ Implemented |
-| Disaster recovery validation | ✅ Implemented |
-| Rolling deployment validation | ✅ Implemented |
-| Prometheus alerting rules | ✅ Implemented |
-| Prometheus alert validation | ✅ Completed |
-| IRSA failure validation | ✅ Completed |
-| AlertManager integration | 🚧 In Progress |
-| Recording-gap detection service | Planned |
-| Real radio stream recording | Planned |
-| Multi-environment deployment support | Planned |
+| Non-root container execution                       | ✅ Implemented |
+| Operational runbooks                               | ✅ Implemented |
+| Disaster recovery validation                       | ✅ Implemented |
+| Rolling deployment validation                      | ✅ Implemented |
+| Prometheus alerting rules                          | ✅ Implemented |
+| Prometheus alert validation                        | ✅ Implemented |
+| IRSA failure validation                            | ✅ Implemented |
+| Recording freshness monitoring                     | ✅ Implemented |
+| Recording gap detection alerting                   | ✅ Implemented |
+| Recording gap fault-injection validation           | ✅ Implemented |
+| Business-health dashboards                         | ✅ Implemented |
+| AlertManager integration                           | 🚧 In Progress |
+| Dedicated recording-gap detection service          | Planned        |
+| Real radio stream recording                        | Planned        |
 
 The platform has been successfully destroyed and recreated using Terraform and operational runbooks, validating that infrastructure and deployment processes are reproducible and recoverable.
 
@@ -101,18 +117,22 @@ GitHub Actions
        └── Liveness Probe
               │
               ▼
-              IRSA
+            IRSA
               │
               ▼
-            Amazon S3
+         Amazon S3
               │
               ▼
-       Observability Stack
-       ├── Prometheus
-       ├── ServiceMonitor
-       ├── PrometheusRule Alerts
-       ├── Grafana
-       └── AlertManager (Planned Integration)
+   Business Health Metrics
+              │
+              ▼
+          Prometheus
+              │
+              ▼
+           Grafana
+              │
+              ▼
+     RecordingGapDetected
 ```
 
 The application uses IAM Roles for Service Accounts (IRSA) to access AWS services without embedding credentials inside pods.
@@ -144,13 +164,17 @@ Desired State Controller
            Amazon S3
               │
               ▼
-      Gap Detection Service
+          Prometheus
               │
               ▼
-   Monitoring and Alerting
+           Grafana
 ```
 
 The long-term architecture separates station management, recording workloads, upload validation, business monitoring, and operational alerting.
+
+The current platform implements recording-gap detection through Prometheus business-health metrics and alerting.
+
+A dedicated gap-detection service remains a future enhancement for advanced validation and analytics use cases.
 
 ---
 
@@ -192,6 +216,28 @@ station-001/2026/11/10/13/<timestamp>.json
 ```
 
 This partitioning strategy supports future analytics, retention policies, and gap-detection workflows.
+
+The platform additionally tracks the timestamp of the most recent successful upload for every station.
+
+This enables business-health monitoring based on recording freshness rather than infrastructure health alone.
+
+```text
+Example:
+
+Generate Recording
+        │
+        ▼
+Upload To S3
+        │
+        ▼
+Update latest_successful_upload_timestamp
+        │
+        ▼
+Prometheus Evaluation
+        │
+        ▼
+RecordingGapDetected Alert
+```
 
 ---
 
@@ -238,6 +284,13 @@ The platform has been validated against the following operational scenarios:
 - Upload failure alert validation
 - Upload failure-rate alert validation
 - CPU utilisation alert validation
+- Recording freshness monitoring
+- Business-health monitoring validation
+- Recording gap detection validation
+- Recording gap recovery validation
+- Alert lifecycle validation
+- Prometheus alert recovery validation
+- Recording freshness metric validation
 
 This validation demonstrates that the platform can be recreated, monitored, operated, and fault-tested using documented procedures.
 
@@ -270,6 +323,37 @@ This approach validates not only the monitoring stack but also the business and 
 
 ---
 
+# Recording Gap Detection
+
+Recording gap detection has been implemented using business-health monitoring.
+
+Each successful upload updates:
+
+latest_successful_upload_timestamp
+
+Prometheus continuously evaluates recording freshness using:
+
+```promql
+time() - latest_successful_upload_timestamp
+```
+
+If successful uploads stop for longer than five minutes, a RecordingGapDetected alert is triggered.
+
+Unlike infrastructure alerts, this capability detects business-level failures where the application may still be running but recordings are no longer being delivered successfully.
+
+Validation was completed through controlled fault injection against station-004.
+
+The validation lifecycle included:
+
+- Recording delivery interruption
+- Metric staleness detection
+- Alert pending state
+- Alert firing state
+- Service recovery
+- Automatic alert resolution
+
+---
+
 # Observability
 
 The platform exposes application metrics and health endpoints that support monitoring, troubleshooting, and future alerting.
@@ -278,13 +362,15 @@ The platform exposes application metrics and health endpoints that support monit
 
 The following custom Prometheus metrics are exported:
 
-| Metric | Description |
-|----------|----------|
-| recordings_generated_total | Total recordings generated |
-| s3_upload_success_total | Successful S3 uploads |
-| s3_upload_failure_total | Failed S3 uploads |
-| upload_duration_seconds | Upload latency histogram |
-| generation_cycle_duration_seconds | Generation cycle latency histogram |
+| Metric                             | Description                                    |
+| ---------------------------------- | ---------------------------------------------- |
+| recordings_generated_total         | Total recordings generated                     |
+| s3_upload_success_total            | Successful S3 uploads                          |
+| s3_upload_failure_total            | Failed S3 uploads                              |
+| latest_recording_timestamp         | Latest recording generation timestamp          |
+| latest_successful_upload_timestamp | Latest successful recording delivery timestamp |
+| upload_duration_seconds            | Upload latency histogram                       |
+| generation_cycle_duration_seconds  | Generation cycle latency histogram             |
 
 Metrics are exposed through:
 
@@ -365,25 +451,47 @@ Examples include:
 
 This approach reflects operational reality and production-style observability practices.
 
+### Business Health Dashboards
+
+The platform includes a dedicated business-health dashboard row focused on service outcomes rather than infrastructure availability.
+
+The business-health dashboards include:
+
+- Recording Delivery Age
+- Oldest Recording Delivery
+- Active Uploading Stations
+- Recording Gap Candidates
+- Upload Success Rate
+
+Recording freshness is calculated using:
+
+```promql
+time() - latest_successful_upload_timestamp
+```
+
 ---
 
 ### Dashboard Screenshots
 
 #### KPIs
 
-![KPIs](docs/Grafana%20Dashboard%20Snapshots/KPIs.png)
+![KPIs](<docs/Grafana%20Dashboard%20Snapshots/KPIs.png>)
 
 #### Business Metrics
 
-![Business Metrics](docs/Grafana%20Dashboard%20Snapshots/Buisness%20Metrics.png)
+![Business Metrics](<docs/Grafana%20Dashboard%20Snapshots/Buisness%20Metrics.png>)
 
 #### Platform Performance
 
-![Platform Performance](docs/Grafana%20Dashboard%20Snapshots/Platform%20Performance.png)
+![Platform Performance](<docs/Grafana%20Dashboard%20Snapshots/Platform%20Performance.png>)
 
 #### Platform Health
 
-![Platform Health](docs/Grafana%20Dashboard%20Snapshots/Platform%20Health.png)
+![Platform Health](<docs/Grafana%20Dashboard%20Snapshots/Platform%20Health.png>)
+
+#### Business Health
+
+![Buisness Health](<docs/Grafana%20Dashboard%20Snapshots/Business%20Health.png>)
 
 ---
 
@@ -393,13 +501,14 @@ The platform includes custom PrometheusRule definitions designed to monitor both
 
 ## Implemented Alerts
 
-| Alert | Purpose |
-|----------|----------|
-| GeneratorPodDown | Detect unavailable generator workloads |
-| UploadFailuresDetected | Detect failed S3 uploads |
-| UploadFailureRateHigh | Detect elevated upload failure rates |
-| HighCpuUsage | Detect excessive CPU utilisation |
-| HighMemoryUsage | Detect excessive memory utilisation |
+| Alert                  | Purpose                                   |
+| ---------------------- | ----------------------------------------- |
+| GeneratorPodDown       | Detect unavailable generator workloads    |
+| UploadFailuresDetected | Detect failed S3 uploads                  |
+| UploadFailureRateHigh  | Detect elevated upload failure rates      |
+| HighCpuUsage           | Detect excessive CPU utilisation          |
+| HighMemoryUsage        | Detect excessive memory utilisation       |
+| RecordingGapDetected   | Detect stale or missing recording uploads |
 
 ## Alert Validation
 
@@ -452,6 +561,24 @@ Result:
 ```text
 Upload failure rate exceeded threshold
 Alert fired successfully
+```
+
+### RecordingGapDetected
+
+Validation:
+
+```text
+Controlled station fault injection
+```
+
+```text
+Successful uploads stopped for station-004
+latest_successful_upload_timestamp became stale
+Prometheus rule entered pending state
+RecordingGapDetected entered firing state
+Fault injection was removed
+Uploads resumed
+Alert automatically resolved
 ```
 
 ---
@@ -758,13 +885,14 @@ Always verify:
 
 # Release Milestones
 
-| Release | Capability |
-|----------|----------|
-| v0.5.4 | Health probes, non-root containers, Grafana dashboard |
-| v0.5.5 | Dynamic station onboarding using stations.yaml |
-| v0.5.6 | Deployment-safe observability and operational KPIs |
-| v0.5.7 | Prometheus alerting, fault-injection testing, alert validation |
-
+| Release | Capability                                                    |
+| ------- | ------------------------------------------------------------- |
+| v0.5.4  | Health probes, non-root containers, Grafana dashboard         |
+| v0.5.5  | Dynamic station onboarding using stations.yaml                |
+| v0.5.6  | Deployment-safe observability and operational KPIs            |
+| v0.5.7  | Prometheus alerting and operational validation                |
+| v0.6.2  | Recording freshness monitoring and business-health dashboards |
+| v0.6.3  | Recording gap detection and alert lifecycle validation        |
 
 ---
 
@@ -790,19 +918,27 @@ Always verify:
 - Disaster recovery runbooks
 - Operational KPI dashboards
 
-## Phase 3 - Alerting 🚧
+## Phase 3 - Alerting ✅
 
 ✅ PrometheusRule definitions
 ✅ Alert validation
-⬜ AlertManager integration
-⬜ Incident response workflows
 
-## Phase 4 - Recording Gap Detection
+## Phase 4 - Recording Gap Detection ✅
 
-- Missing recording detection
-- Recording freshness validation
-- Coverage dashboards
-- Business health metrics
+✅ Missing recording detection
+✅ Recording freshness validation
+✅ Coverage dashboards
+✅ Business health metrics
+✅ RecordingGapDetected alert
+✅ Fault-injection validation
+✅ Alert lifecycle validation
+
+## Phase 4.5 - Alerting Enhancements
+
+AlertManager integration
+Notification routing
+Incident workflows
+Escalation policies
 
 ## Phase 5 - Real Recording Workloads
 
@@ -824,21 +960,21 @@ Always verify:
 
 # Technology Stack
 
-| Area | Technology |
-|--------|------------|
-| Cloud | AWS |
-| Infrastructure as Code | Terraform |
-| Container Orchestration | Kubernetes |
-| Managed Kubernetes | Amazon EKS |
-| Container Registry | Amazon ECR |
-| Object Storage | Amazon S3 |
-| Workload Identity | IRSA |
-| Application Runtime | Python |
-| Containerization | Docker |
-| Monitoring | Prometheus |
-| Visualisation | Grafana |
-| Alerting | AlertManager |
-| CI/CD | GitHub Actions |
+| Area                    | Technology     |
+| ----------------------- | -------------- |
+| Cloud                   | AWS            |
+| Infrastructure as Code  | Terraform      |
+| Container Orchestration | Kubernetes     |
+| Managed Kubernetes      | Amazon EKS     |
+| Container Registry      | Amazon ECR     |
+| Object Storage          | Amazon S3      |
+| Workload Identity       | IRSA           |
+| Application Runtime     | Python         |
+| Containerization        | Docker         |
+| Monitoring              | Prometheus     |
+| Visualisation           | Grafana        |
+| Alerting                | AlertManager   |
+| CI/CD                   | GitHub Actions |
 
 ---
 
@@ -847,7 +983,6 @@ Always verify:
 For detailed architecture, requirements, observability strategy, reliability design, and future platform evolution:
 
 **docs/design-documentation.md**
-
 
 ## CI/CD
 
