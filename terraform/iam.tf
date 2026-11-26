@@ -88,7 +88,7 @@ data "aws_iam_policy_document" "ebs_csi_assume_role" {
 
     condition {
       test     = "StringEquals"
-      variable = "${replace(module.eks.oidc_provider, "https://", "")}:sub"
+      variable = "${local.oidc_provider_url}:sub"
 
       values = [
         "system:serviceaccount:kube-system:ebs-csi-controller-sa"
