@@ -9,14 +9,24 @@
 # one recorder workload per station with
 # dedicated storage ownership.
 # --------------------------------------------------
+
 apiVersion: v1
 kind: PersistentVolumeClaim
+
 metadata:
   name: generator-storage
   namespace: radio-platform
+
 spec:
+
+  # AWS EBS-backed storage provisioned through
+  # the EBS CSI Driver.
+  storageClassName: gp2
+
+  # Single pod writes to the volume.
   accessModes:
     - ReadWriteOnce
+
   resources:
     requests:
       storage: 1Gi
