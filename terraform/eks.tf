@@ -33,6 +33,7 @@ module "eks" {
     # Persistent Volumes through PersistentVolumeClaims.
     #
     # Uses IRSA for AWS API access.
+    
     aws-ebs-csi-driver = {
       service_account_role_arn = aws_iam_role.ebs_csi_driver.arn
     }
