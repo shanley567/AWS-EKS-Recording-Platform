@@ -43,9 +43,10 @@ docker login `
 docker push `
 548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:v0.6.2
 # Command 9
-aws ecr list-images `
---repository-name synthetic-generator `
---region eu-west-2
+aws ecr describe-images `
+>>   --repository-name synthetic-generator `
+>>   --region eu-west-2 `
+>> |  Select-String -Pattern '"imageTags"' -Context 0,2
 
 Set-Location "C:\Users\js105\Documents\Coding_portfolio\radio-recording-platform"
 
