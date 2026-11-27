@@ -218,6 +218,21 @@ latest_successful_upload_timestamp = Gauge(
     ["station"]
 )
 
+spool_files_pending = Gauge(
+    "spool_files_pending",
+    "Files waiting for upload"
+)
+
+upload_retries_total = Counter(
+    "upload_retries_total",
+    "Total upload retries"
+)
+
+spool_oldest_file_age_seconds = Gauge(
+    "spool_oldest_file_age_seconds",
+    "Age of oldest file in spool"
+)
+
 # ----------------------------------------------------------
 # Initialise upload timestamp metrics.
 #
