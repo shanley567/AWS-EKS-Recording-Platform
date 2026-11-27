@@ -18,6 +18,8 @@ from prometheus_client import (
 )
 from pathlib import Path
 
+from datetime import datetime, timedelta, timezone
+
 # ------------------------------------------------------------------
 # CONFIGURATION
 # ------------------------------------------------------------------
@@ -339,6 +341,30 @@ def upload_file(
         upload_duration
     )
 
+# ----------------------------------------------------------
+# Creates retry metadata alongside a generated file.
+#
+# Metadata is used by the spool processor to determine
+# when the next upload attempt should occur.
+# ----------------------------------------------------------
+
+def create_retry_metadata(
+    metadata_path: Path
+) -> None:
+
+    metadata = {
+        "retry_count": 0,
+        "next_attempt": datetime.now(
+            timezone.utc
+        ).isoformat()
+    }
+
+    metadata_path.write_text(
+        json.dumps(
+            metadata,
+            indent=2
+        )
+    )
 
 # ------------------------------------------------------------------
 # STARTUP
