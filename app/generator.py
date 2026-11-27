@@ -482,6 +482,113 @@ def update_retry_metadata(
     )
 
 
+# ----------------------------------------------------------
+# Background spool processor.
+#
+# Scans all files within the PVC-backed spool
+# directory and uploads any retry-eligible files.
+#
+# Successful uploads remove both:
+#
+# - recording file
+# - retry metadata file
+#
+# Failed uploads remain on disk and receive
+# updated retry metadata.
+# ----------------------------------------------------------
+
+def process_spool() -> None:
+
+    pending_count = 0
+
+    oldest_file_age = 0
+
+    for file_path in OUTPUT_DIR.rglob("*.json"):
+
+        if file_path.name.endswith(
+            ".metadata.json"
+        ):
+            continue
+
+        metadata_path = file_path.with_suffix(
+            ".metadata.json"
+        )
+
+        if not metadata_path.exists():
+            continue
+
+        pending_count += 1
+
+        file_age = (
+            time.time()
+            - file_path.stat().st_mtime
+        )
+
+        oldest_file_age = max(
+            oldest_file_age,
+            file_age
+        )
+
+        if not should_retry(
+            metadata_path
+        ):
+            continue
+
+        station = file_path.parent.name
+
+        try:
+
+            upload_file(
+                file_path,
+                station
+            )
+
+            s3_upload_success_total.labels(
+                station=station
+            ).inc()
+
+            latest_successful_upload_timestamp.labels(
+                station=station
+            ).set(
+                datetime.now(
+                    UTC
+                ).timestamp()
+            )
+
+            file_path.unlink()
+
+            metadata_path.unlink()
+
+            logger.info(
+                "Spool upload successful | station=%s file=%s",
+                station,
+                file_path
+            )
+
+        except Exception as error:
+
+            s3_upload_failure_total.labels(
+                station=station
+            ).inc()
+
+            update_retry_metadata(
+                metadata_path
+            )
+
+            logger.warning(
+                "Spool upload failed | station=%s file=%s error=%s",
+                station,
+                file_path,
+                str(error)
+            )
+
+    spool_files_pending.set(
+        pending_count
+    )
+
+    spool_oldest_file_age_seconds.set(
+        oldest_file_age
+    )
 # ------------------------------------------------------------------
 # STARTUP
 # ------------------------------------------------------------------
