@@ -424,6 +424,29 @@ def calculate_retry_delay(
     return base_delay + jitter
 
 
+# ----------------------------------------------------------
+# Determines whether a file is eligible
+# for another upload attempt.
+# ----------------------------------------------------------
+
+def should_retry(
+    metadata_path: Path
+) -> bool:
+
+    metadata = json.loads(
+        metadata_path.read_text()
+    )
+
+    next_attempt = datetime.fromisoformat(
+        metadata["next_attempt"]
+    )
+
+    return (
+        datetime.now(timezone.utc)
+        >= next_attempt
+    )
+
+
 # ------------------------------------------------------------------
 # STARTUP
 # ------------------------------------------------------------------
