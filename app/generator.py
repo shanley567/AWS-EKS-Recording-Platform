@@ -368,10 +368,15 @@ def create_retry_metadata(
 ) -> None:
 
     metadata = {
-        "retry_count": 0,
-        "next_attempt": datetime.now(
-            timezone.utc
-        ).isoformat()
+    "retry_count": 0,
+
+    "created_at": datetime.now(
+        timezone.utc
+    ).isoformat(),
+
+    "next_attempt": datetime.now(
+        timezone.utc
+    ).isoformat()
     }
 
     metadata_path.write_text(
