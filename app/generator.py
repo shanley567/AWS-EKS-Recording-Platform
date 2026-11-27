@@ -3,7 +3,12 @@ import json
 import logging
 import random
 import time
-from datetime import UTC, datetime
+from datetime import (
+    UTC,
+    datetime,
+    timedelta,
+    timezone
+)
 from pathlib import Path
 from threading import Thread
 
@@ -17,17 +22,15 @@ from prometheus_client import (
     generate_latest,
     Gauge
 )
-from pathlib import Path
-
-from datetime import datetime, timedelta, timezone
 
 # ------------------------------------------------------------------
 # CONFIGURATION
 # ------------------------------------------------------------------
 
-BUCKET_NAME = os.environ[
-    "S3_BUCKET_NAME"
-]
+BUCKET_NAME = os.getenv(
+    "S3_BUCKET_NAME",
+    "jsp-radio-recordings-bucket-2026-demo"
+)
 
 APP_DIR = Path(__file__).parent
 STATIONS_FILE = APP_DIR / "stations.yaml"
@@ -557,6 +560,7 @@ def process_spool() -> None:
             "Processing spool file | station=%s file=%s",
             station,
             file_path
+        )
 
         try:
 
@@ -609,7 +613,6 @@ def process_spool() -> None:
         oldest_file_age
     )
 
-)
 # ------------------------------------------------------------------
 # STARTUP
 # ------------------------------------------------------------------
@@ -825,19 +828,6 @@ while True:
         # to ensure failed uploads survive pod replacement.
         # ------------------------------------------------------
 
-        filename.unlink()
-
-        logger.info(
-            "Local file deleted | station=%s file=%s",
-            station_id,
-            filename
-        )
-
-    except Exception as error:
-
-        s3_upload_failure_total.labels(
-            station=station_id
-        ).inc()
 
         logger.exception(
             (
