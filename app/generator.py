@@ -446,6 +446,41 @@ def should_retry(
         >= next_attempt
     )
 
+# ----------------------------------------------------------
+# Upload retry handler
+# ----------------------------------------------------------
+def update_retry_metadata(
+    metadata_path: Path
+) -> None:
+
+    metadata = json.loads(
+        metadata_path.read_text()
+    )
+
+    metadata["retry_count"] += 1
+
+    upload_retries_total.inc()
+
+    retry_delay = calculate_retry_delay(
+        metadata["retry_count"]
+    )
+
+    metadata["next_attempt"] = (
+        datetime.now(
+            timezone.utc
+        ) +
+        timedelta(
+            seconds=retry_delay
+        )
+    ).isoformat()
+
+    metadata_path.write_text(
+        json.dumps(
+            metadata,
+            indent=2
+        )
+    )
+
 
 # ------------------------------------------------------------------
 # STARTUP
