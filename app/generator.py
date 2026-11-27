@@ -486,6 +486,15 @@ def update_retry_metadata(
         )
     )
 
+    # Just initial logging for now
+    # Future will inclide a DLQ
+    if metadata["retry_count"] >= 10:
+
+        logger.error(
+            "Retry threshold exceeded | file=%s",
+            metadata_path
+        )
+
 
 # ----------------------------------------------------------
 # Background spool processor.
