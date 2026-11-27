@@ -536,59 +536,12 @@ def process_spool() -> None:
 
         station = file_path.parent.name
 
-        try:
+        logger.info(
+            "Recording added to spool | station=%s file=%s",
+            station_id,
+            filename
+)
 
-            upload_file(
-                file_path,
-                station
-            )
-
-            s3_upload_success_total.labels(
-                station=station
-            ).inc()
-
-            latest_successful_upload_timestamp.labels(
-                station=station
-            ).set(
-                datetime.now(
-                    UTC
-                ).timestamp()
-            )
-
-            file_path.unlink()
-
-            metadata_path.unlink()
-
-            logger.info(
-                "Spool upload successful | station=%s file=%s",
-                station,
-                file_path
-            )
-
-        except Exception as error:
-
-            s3_upload_failure_total.labels(
-                station=station
-            ).inc()
-
-            update_retry_metadata(
-                metadata_path
-            )
-
-            logger.warning(
-                "Spool upload failed | station=%s file=%s error=%s",
-                station,
-                file_path,
-                str(error)
-            )
-
-    spool_files_pending.set(
-        pending_count
-    )
-
-    spool_oldest_file_age_seconds.set(
-        oldest_file_age
-    )
 # ------------------------------------------------------------------
 # STARTUP
 # ------------------------------------------------------------------
