@@ -1,3 +1,4 @@
+import os
 import json
 import logging
 import random
@@ -24,7 +25,9 @@ from datetime import datetime, timedelta, timezone
 # CONFIGURATION
 # ------------------------------------------------------------------
 
-BUCKET_NAME = "jsp-radio-recordings-bucket-2026-demo"
+BUCKET_NAME = os.environ[
+    "S3_BUCKET_NAME"
+]
 
 APP_DIR = Path(__file__).parent
 STATIONS_FILE = APP_DIR / "stations.yaml"
