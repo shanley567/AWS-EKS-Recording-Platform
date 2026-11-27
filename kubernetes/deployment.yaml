@@ -62,6 +62,10 @@ spec:
         # Explicit runtime group.
         runAsGroup: 1000
 
+
+        # k8 mechanism for making pvc writable to non-root containers
+        fsGroup: 1000
+
       # --------------------------------------------------
       # Persistent storage.
       #
