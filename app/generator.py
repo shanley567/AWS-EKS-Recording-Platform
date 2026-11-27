@@ -35,8 +35,17 @@ BUCKET_NAME = os.getenv(
 APP_DIR = Path(__file__).parent
 STATIONS_FILE = APP_DIR / "stations.yaml"
 
-OUTPUT_DIR = Path("/data/output")
-OUTPUT_DIR.mkdir(exist_ok=True)
+OUTPUT_DIR = Path(
+    os.getenv(
+        "OUTPUT_DIR",
+        "/data/output"
+    )
+)
+
+OUTPUT_DIR.mkdir(
+    parents=True,
+    exist_ok=True
+)
 
 # ------------------------------------------------------------------
 # TESTING CONFIGURATION
