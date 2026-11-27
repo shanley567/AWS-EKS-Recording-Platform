@@ -828,21 +828,6 @@ while True:
         # to ensure failed uploads survive pod replacement.
         # ------------------------------------------------------
 
-
-        logger.exception(
-            (
-                "Upload failed | "
-                "station_id=%s "
-                "station_name=%s "
-                "file=%s "
-                "error=%s"
-            ),
-            station_id,
-            station_name,
-            filename,
-            str(error)
-        )
-
     cycle_duration = round(
         time.time() - cycle_start,
         2
