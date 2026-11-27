@@ -739,14 +739,6 @@ while True:
 
         filename = station_dir / f"{int(time.time())}.json"
 
-        metadata_file = (
-            filename.with_suffix(".metadata.json")
-        )
-
-        create_retry_metadata(
-            metadata_file
-        )
-
         with open(
             filename,
             "w",
@@ -757,6 +749,14 @@ while True:
                 payload,
                 file
             )
+
+        metadata_file = (
+            filename.with_suffix(".metadata.json")
+        )
+
+        create_retry_metadata(
+            metadata_file
+        )
 
         recordings_generated_total.labels(
             station=station_id
