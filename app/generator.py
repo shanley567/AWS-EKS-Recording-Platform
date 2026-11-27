@@ -832,6 +832,12 @@ while True:
     )
 
     logger.info(
+    "Running spool processor"
+    )
+
+    process_spool()
+
+    logger.info(
         "Sleeping before next cycle | sleep_seconds=60"
     )
 
