@@ -386,6 +386,29 @@ def calculate_backoff_seconds(
         900
     )
 
+
+# ----------------------------------------------------------
+# Adds randomisation to retry timing.
+#
+# Prevents retry storms and thundering herd effects.
+# ----------------------------------------------------------
+
+def calculate_retry_delay(
+    retry_count: int
+) -> int:
+
+    base_delay = calculate_backoff_seconds(
+        retry_count
+    )
+
+    jitter = random.randint(
+        0,
+        base_delay // 2
+    )
+
+    return base_delay + jitter
+
+
 # ------------------------------------------------------------------
 # STARTUP
 # ------------------------------------------------------------------
