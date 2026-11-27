@@ -366,6 +366,26 @@ def create_retry_metadata(
         )
     )
 
+# ----------------------------------------------------------
+# Calculates exponential retry delay.
+#
+# Examples:
+#
+# retry 0 = 30 seconds
+# retry 1 = 60 seconds
+# retry 2 = 120 seconds
+# retry 3 = 240 seconds
+# ----------------------------------------------------------
+
+def calculate_backoff_seconds(
+    retry_count: int
+) -> int:
+
+    return min(
+        30 * (2 ** retry_count),
+        900
+    )
+
 # ------------------------------------------------------------------
 # STARTUP
 # ------------------------------------------------------------------
