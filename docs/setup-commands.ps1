@@ -29,6 +29,7 @@ kubectl get pods -n kube-system
 aws ecr describe-repositories `
 --repository-names synthetic-generator `
 --region eu-west-2
+|  Select-String -Pattern '"repositories"' -Context 1,10
 
 # Command 7
 aws ecr get-login-password `
@@ -44,9 +45,8 @@ docker push `
 548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:v0.6.2
 # Command 9
 aws ecr describe-images `
->>   --repository-name synthetic-generator `
->>   --region eu-west-2 `
->> |  Select-String -Pattern '"imageTags"' -Context 0,2
+--repository-name synthetic-generator `
+|  Select-String -Pattern '"imageTags"' -Context 0,2
 
 Set-Location "C:\Users\js105\Documents\Coding_portfolio\radio-recording-platform"
 
