@@ -95,6 +95,12 @@ spec:
           # Always pull latest image for tag.
           imagePullPolicy: Always
 
+          # Application configuration.
+          env:
+
+            - name: S3_BUCKET_NAME
+              value: "jsp-radio-recordings-bucket-2026-demo"
+
           ports:
 
             # Metrics and health endpoints.
