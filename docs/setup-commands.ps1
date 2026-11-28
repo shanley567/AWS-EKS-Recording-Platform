@@ -29,7 +29,7 @@ kubectl get pods -n kube-system
 aws ecr describe-repositories `
 --repository-names synthetic-generator `
 --region eu-west-2
-|  Select-String -Pattern '"repositories"' -Context 1,11
+|  Select-String -Pattern '"repositories"' -Context 1,10
 
 # Command 7
 aws ecr get-login-password `
