@@ -42,7 +42,7 @@ docker login `
 
 # Command 8
 docker push `
-548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:v0.6.2
+548722508417.dkr.ecr.eu-west-2.amazonaws.com/synthetic-generator:v0.7.0
 
 # Command 9
 aws ecr describe-images `
